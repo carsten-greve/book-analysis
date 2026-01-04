@@ -10,15 +10,20 @@ const homeDir = os.homedir();
 const certFolder = path.join(homeDir, ".office-addin-dev-certs");
 const keyPath = path.join(certFolder, "localhost.key");
 const certPath = path.join(certFolder, "localhost.crt");
+const serverConfig = {
+  port: 3000,
+  https: {
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath),
+  }};
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  server: {
-    port: 3000,
-    https: {
-      key: fs.readFileSync(keyPath),
-      cert: fs.readFileSync(certPath),
-    },
-  },
+export default defineConfig(({ mode }) => {
+  const isDev = mode === 'development';
+
+  return {
+    plugins: [react(), tailwindcss()],
+    ...(isDev && {server: serverConfig}),
+    ...(!isDev && {base: '/book-analysis/'}),
+  };
 });
