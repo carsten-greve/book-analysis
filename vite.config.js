@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import fs from 'fs';
@@ -24,8 +25,23 @@ export default defineConfig(({ mode }) => {
       }};
   }
 
+  const makeProdManifest = () => viteStaticCopy({
+    targets: [
+      {
+        src: 'manifest.xml',
+        dest: './', // Copies to the root of 'dist'
+        rename: 'book-analysis.xml',
+        transform: (content) => content.toString().replace(/localhost:3000/g, 'carsten-greve.github.io/book-analysis'),
+      },
+    ],
+  });
+
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      makeProdManifest()
+    ],
     ...(isDev && {server: serverConfig}),
     ...(!isDev && {base: '/book-analysis/'}),
   };
