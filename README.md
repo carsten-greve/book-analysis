@@ -22,6 +22,7 @@ well, it now seems to work for desktop word as well:
 npx office-addin-debugging start manifest.xml word
 npx office-addin-debugging stop manifest.xml
 
+Place 'https://carsten-greve.github.io/book-analysis/book-analysis.xml' in the shared folder for Word add-ins.
 
 See https://learn.microsoft.com/en-us/office/dev/add-ins/develop/xml-manifest-overview?tabs=tabid-1
 
