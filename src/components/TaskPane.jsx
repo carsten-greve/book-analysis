@@ -1,4 +1,5 @@
 import TaskSection from './TaskSection';
+import ParagraphSize from './ParagraphSize';
 
 function TaskPane() {
   return (
@@ -29,6 +30,8 @@ function TaskPane() {
             </label>
           </div>
         </TaskSection>
+
+        <ParagraphSize></ParagraphSize>
       </div>
     </div>
   );
