@@ -4,257 +4,134 @@ import { sleep } from '../utils/timer';
 import TaskSection from './TaskSection';
 
 function ParagraphSize() {
-  const [longParagraphs, setLongParagraphs] = useState({});
+  const [allParagraphs, setAllParagraphs] = useState({});
+  const [violatingParagraphIds, setViolatingParagraphIds] = useState([]);
 
-  false && useEffect(() => {
-    let isMounted = true;
+  const getParagraphCache = (text) => {
+    const doc = nlp(text);
 
-    const initLongParagraphs = async () => {
-      await Word.run(async (context) => {
-        let longParagraphs = {};
-
-        const paragraphs = context.document.body.paragraphs;
-        paragraphs.load("text, uniqueLocalId, items, font");
-        if (isMounted){
-          await context.sync();
-        }
-
-        for (const paragraph of paragraphs.items) {
-          const doc = nlp(paragraph.text);
-          const sentences = doc.sentences();
-          const sentenceCount = sentences.length;
-
-          if (sentenceCount > 12) {
-            if (isMounted) {
-              console.log(`Found long paragraph with ${sentenceCount} sentences.`);
-            }
-            longParagraphs[paragraph.uniqueLocalId] = {
-              // paragraph,
-              sentenceCount,
-            };
-            paragraph.font.highlightColor = "Yellow";
-          }
-
-          context.trackedObjects.remove(paragraph);
-          await sleep(10);
-        };
-
-        if (isMounted){
-          setLongParagraphs(longParagraphs);
-          await context.sync();
-        }
-      });
+    return {
+      lead : text.slice(0, 20),
+      sentenceCount : doc.sentences().length,
+      wordCount : doc.wordCount,
     };
+  };
 
-    initLongParagraphs()
-      .catch(console.error);;
+  const paragraphChanged = async (event) => {
+    console.log('paragraphChanged called');
 
-    return () => isMounted = false;
-  }, []);
+    await Word.run(async (context) => {
+      for (const id of event.uniqueLocalIds) {
+        const paragraph = context.document.getParagraphByUniqueLocalId(id);
+        if (paragraph.isNullObject) {
+          continue;
+        }
 
-  false && useEffect(() => {
-    let isMounted = true;
-
-    const initLongParagraphs = async () => {
-      await Word.run(async (context) => {
-        let longParagraphs = {};
-
-        let paragraph = context.document.body.paragraphs.getFirstOrNullObject();
-        paragraph.load("text, uniqueLocalId, font");
+        paragraph.load("text");
         await context.sync();
 
-        while (!paragraph.isNullObject) {
-          const doc = nlp(paragraph.text);
-          const sentences = doc.sentences();
-          const sentenceCount = sentences.length;
-        
-          if (sentenceCount > 12) {
-            if (isMounted) {
-              console.log(`Found long paragraph with ${sentenceCount} sentences.`);
-            }
-            longParagraphs[paragraph.uniqueLocalId] = {
-              // paragraph,
-              sentenceCount,
-            };
-            paragraph.font.highlightColor = "Yellow";
+        const paragraphCache = getParagraphCache(paragraph.text);
+        setAllParagraphs((prev) => ({ ...prev, id: paragraphCache }));
+        if (isViolatingParagraph(paragraphCache)) {
+          setViolatingParagraphIds((prev) => [...new Set([...prev, id])]);
+        } else {
+          const index = violatingParagraphIds.indexOf(id);
+          if (index >= 0) {
+            setViolatingParagraphIds((prev) => prev.toSpliced(index, 1));
           }
-
-          const next = paragraph.getNextOrNullObject();
-          next.load("text, uniqueLocalId, font");
-          await context.sync();
-
-          // Crucial: release the previous one now that we have the next
-          context.trackedObjects.remove(paragraph);
-
-          paragraph = next;
         }
-
-        // Final cleanup (often optional if add-in ends soon)
-        await context.sync();
-  
-        if (isMounted){
-          setLongParagraphs(longParagraphs);
-          await context.sync();
-        }
-      });
-    };
-
-    initLongParagraphs()
-      .catch(console.error);;
-
-    return () => isMounted = false;
-  }, []);
-
-  false && useEffect(() => {
-    let isMounted = true;
-
-    const initLongParagraphs = async () => {
-      let longParagraphs = {};
-      let isFirst = true;
-      let nextUniqueLocalId = null;
-      while (isFirst || nextUniqueLocalId) {
-        await Word.run(async (context) => {
-          let paragraph = null;
-          if (isFirst) {
-            isFirst = false;
-            paragraph = context.document.body.paragraphs.getFirstOrNullObject();
-          } else {
-            paragraph = context.document.getParagraphByUniqueLocalId(nextUniqueLocalId);
-          }
-          paragraph.load("text, uniqueLocalId, font");
-          await context.sync();
-
-          let batchSize = 100;
-          while (!paragraph.isNullObject && batchSize-- > 0) {
-            const doc = nlp(paragraph.text);
-            const sentences = doc.sentences();
-            const sentenceCount = sentences.length;
-          
-            if (sentenceCount > 12) {
-              if (isMounted) {
-                console.log(`Found long paragraph with ${sentenceCount} sentences.`);
-              }
-              longParagraphs[paragraph.uniqueLocalId] = {
-                // paragraph,
-                sentenceCount,
-              };
-              paragraph.font.highlightColor = "Yellow";
-            }
-  
-            const nextParagraph = paragraph.getNextOrNullObject();
-            nextParagraph.load("text, uniqueLocalId, font");
-            await context.sync();
-  
-            context.trackedObjects.remove(paragraph);
-  
-            paragraph = nextParagraph;
-          }
-
-          nextUniqueLocalId = paragraph.isNullObject ? null : paragraph.uniqueLocalId;
-        });
-
-        await sleep(200);
       }
+    });
+  };
 
-      if (isMounted){
-        setLongParagraphs(longParagraphs);
-        // await context.sync();
-      }
-    };
+  const paragraphAdded = async (event) => {
+    console.log('paragraphAdded called');
 
-    initLongParagraphs()
-      .catch(console.error);;
+    await paragraphChanged(event);
+  };
 
-    return () => isMounted = false;
-  }, []);
+  const paragraphDeleted = async (event) => {
+    console.log('paragraphDeleted called');
 
-  false && useEffect(() => {
-    let isMounted = true;
-
-    const initLongParagraphs = async () => {
-      await Word.run(async (context) => {
-          const paragraphs = context.document.body.paragraphs.load("items");
-          await context.sync();
-
-          for (let i = 0; i < paragraphs.items.length; i++) {
-            const paragraph = paragraphs.items[i];
-            paragraph.load('text, uniqueLocalId, font');
-          }
-          await context.sync();
-
-          for (let i = 0; i < paragraphs.items.length; i++) {
-            const paragraph = paragraphs.items[i];
-            const doc = nlp(paragraph.text);
-            const sentences = doc.sentences();
-            const sentenceCount = sentences.length;
-
-            if (sentenceCount > 12) {
-              console.log(`Found long paragraph with ${sentenceCount} sentences.`);
-              paragraph.font.highlightColor = "Yellow";
-            }
-
-            // console.log(`${paragraph.uniqueLocalId}: ${paragraph.text.slice(0, 20)}`);
-          }
-          await context.sync();
+    for (const id of event.uniqueLocalIds) {
+      setAllParagraphs(prev => {
+        const { [id]: removed, ...rest } = prev;
+        return rest;
       });
-    };
+      const index = violatingParagraphIds.indexOf(id);
+      if (index >= 0) {
+        setViolatingParagraphIds((prev) => prev.toSpliced(index, 1));
+      }
+    }
+  };
 
-    initLongParagraphs()
-      .catch(console.error);;
+  const isViolatingParagraph = (paragraphCache) => {
+    return paragraphCache.sentenceCount > 12;
+  };
 
-    return () => isMounted = false;
+  useEffect(() => {
   }, []);
 
   useEffect(() => {
     let isMounted = true;
 
-    const initLongParagraphs = async () => {
+    const processInitialParagraphs = async () => {
       await Word.run(async (context) => {
-        let longParagraphs = {};
+        let initialParagraphs = {};
+        let initialViolatingParagraphIds = [];
 
-        const paragraphs = context.document.body.paragraphs;
+        // const paragraphs = context.document.body.paragraphs;
+        const paragraphs = context.document.paragraphs;
         paragraphs.load("items");
         if (isMounted){
           await context.sync();
         }
 
         for (const paragraph of paragraphs.items) {
-          // Do NOT load the entire font!
-          paragraph.load("text, uniqueLocalId", "font/highlightColor");
+          paragraph.load("text, uniqueLocalId");
         }
         if (isMounted){
           await context.sync();
         }
 
         for (const paragraph of paragraphs.items) {
-          const doc = nlp(paragraph.text);
-          const sentences = doc.sentences();
-          const sentenceCount = sentences.length;
+          const paragraphCache = initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
 
-          if (sentenceCount > 12) {
-            if (isMounted) {
-              console.log(`Found long paragraph with ${sentenceCount} sentences.`);
-            }
-            longParagraphs[paragraph.uniqueLocalId] = {
-              // paragraph,
-              sentenceCount,
-            };
-            paragraph.font.highlightColor = "Yellow";
+          if (isViolatingParagraph(paragraphCache)) {
+            console.log(`Found long paragraph with ${paragraphCache.sentenceCount} sentences.`);
+            initialViolatingParagraphIds.push(paragraph.uniqueLocalId);
           }
+
+          // if (sentenceCount > 12) {
+          //   if (isMounted) {
+          //     console.log(`Found long paragraph with ${sentenceCount} sentences.`);
+          //   }
+          //   initialParagraphs[paragraph.uniqueLocalId] = {
+          //     // paragraph,
+          //     sentenceCount,
+          //   };
+          //   paragraph.font.highlightColor = "Yellow";
+          // }
 
           context.trackedObjects.remove(paragraph);
           await sleep(10);
         };
 
         if (isMounted){
-          setLongParagraphs(longParagraphs);
+          setAllParagraphs(initialParagraphs);
+          setViolatingParagraphIds(initialViolatingParagraphIds);
+
+          context.document.onParagraphChanged.add(paragraphChanged);
+          context.document.onParagraphAdded.add(paragraphAdded);
+          context.document.onParagraphDeleted.add(paragraphDeleted);
+
           await context.sync();
         }
       });
     };
 
-    initLongParagraphs()
-      .catch(console.error);;
+    processInitialParagraphs()
+      .catch(console.error);
 
     return () => isMounted = false;
   }, []);
