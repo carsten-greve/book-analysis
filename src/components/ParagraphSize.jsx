@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import nlp from 'compromise';
 import { sleep } from '../utils/timer';
 import TaskSection from './TaskSection';
+import ParagraphSizeItems from './ParagraphSizeItems';
 
 function ParagraphSize() {
   const [allParagraphs, setAllParagraphs] = useState({});
@@ -147,6 +148,8 @@ function ParagraphSize() {
       >
         Check Paragraphs
       </button>
+      <ParagraphSizeItems paragraphs={violatingParagraphIds.map(id => allParagraphs[id])}>
+      </ParagraphSizeItems>
     </TaskSection>
   );
 }
