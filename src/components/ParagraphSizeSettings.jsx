@@ -43,7 +43,8 @@ const ParagraphSizeSettings = ({ defaults, onSettingsChange }) => {
             <AlignLeft size={12} /> Sentences
           </label>
           <input 
-            type="number" 
+            type="number"
+            min="5"
             value={thresholds.sentences}
             onChange={(e) => updateSetting('sentences', e.target.value)}
             className="w-full border border-slate-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
@@ -54,7 +55,8 @@ const ParagraphSizeSettings = ({ defaults, onSettingsChange }) => {
             <Hash size={12} /> Word Count
           </label>
           <input 
-            type="number" 
+            type="number"
+            min="100"
             value={thresholds.words}
             onChange={(e) => updateSetting('words', e.target.value)}
             className="w-full border border-slate-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 outline-none"

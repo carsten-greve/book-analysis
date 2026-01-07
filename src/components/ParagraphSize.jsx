@@ -1,4 +1,4 @@
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useMemo } from 'react';
 import nlp from 'compromise';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { ChevronDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
@@ -8,13 +8,27 @@ import ParagraphSizeSettings from './ParagraphSizeSettings';
 
 function ParagraphSize() {
   const [allParagraphs, setAllParagraphs] = useState({});
-  const [violatingParagraphIds, setViolatingParagraphIds] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [sentenceThreshold, setSentenceThreshold] = useState(10);
   const [wordThreshold, setWordThreshold] = useState(150);
 
   const isProcessing = isLoading || isPending;
+
+  const isLongParagraph = (paragraphCache) => {
+    return paragraphCache.sentenceCount > sentenceThreshold || paragraphCache.wordCount > wordThreshold;
+  };
+
+  const longParagraphs = useMemo(() => {
+    return Object.entries(allParagraphs).filter(([id, paragraph]) => isLongParagraph(paragraph));
+  }, [allParagraphs, sentenceThreshold, wordThreshold]);
+
+  const handleSettingsUpdate = (newThresholds) => {
+    startTransition(() => {
+      setSentenceThreshold(newThresholds.sentences);
+      setWordThreshold(newThresholds.words);
+    });
+  };
 
   const getParagraphCache = (text) => {
     const doc = nlp(text);
@@ -41,15 +55,7 @@ function ParagraphSize() {
           await context.sync();
 
           const paragraphCache = getParagraphCache(paragraph.text);
-          setAllParagraphs((prev) => ({ ...prev, id: paragraphCache }));
-          if (isViolatingParagraph(paragraphCache)) {
-            setViolatingParagraphIds((prev) => [...new Set([...prev, id])]);
-          } else {
-            const index = violatingParagraphIds.indexOf(id);
-            if (index >= 0) {
-              setViolatingParagraphIds((prev) => prev.toSpliced(index, 1));
-            }
-          }
+          setAllParagraphs((prev) => ({ ...prev, [id]: paragraphCache }));
         }
       });
     });
@@ -69,20 +75,7 @@ function ParagraphSize() {
         const { [id]: removed, ...rest } = prev;
         return rest;
       });
-      const index = violatingParagraphIds.indexOf(id);
-      if (index >= 0) {
-        setViolatingParagraphIds((prev) => prev.toSpliced(index, 1));
-      }
     }
-  };
-
-  const isViolatingParagraph = (paragraphCache) => {
-    return paragraphCache.sentenceCount > sentenceThreshold || paragraphCache.wordCount > wordThreshold;
-  };
-
-  const handleSettingsUpdate = (newThresholds) => {
-    setSentenceThreshold(newThresholds.sentences);
-    setWordThreshold(newThresholds.words);
   };
 
   useEffect(() => {
@@ -95,7 +88,6 @@ function ParagraphSize() {
 
       await Word.run(async (context) => {
         let initialParagraphs = {};
-        let initialViolatingParagraphIds = [];
 
         // const paragraphs = context.document.body.paragraphs;
         const paragraphs = context.document.paragraphs;
@@ -114,11 +106,6 @@ function ParagraphSize() {
         for (const paragraph of paragraphs.items) {
           const paragraphCache = initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
 
-          if (isViolatingParagraph(paragraphCache)) {
-            console.log(`Found long paragraph with ${paragraphCache.sentenceCount} sentences.`);
-            initialViolatingParagraphIds.push(paragraph.uniqueLocalId);
-          }
-
           // if (sentenceCount > 12) {
           //   if (!signal.aborted) {
           //     console.log(`Found long paragraph with ${sentenceCount} sentences.`);
@@ -136,7 +123,6 @@ function ParagraphSize() {
 
         if (!signal.aborted){
           setAllParagraphs(initialParagraphs);
-          setViolatingParagraphIds(initialViolatingParagraphIds);
 
           console.log('onParagraph...');
           context.document.onParagraphChanged.add(paragraphChanged);
@@ -190,7 +176,7 @@ function ParagraphSize() {
                     <Loader2 size={14} className="ml-3 animate-spin text-slate-400" />
                   ) : (
                     <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
-                      {Object.keys(violatingParagraphIds).length}
+                      {longParagraphs.length}
                     </span>
                   )}
                 </div>
@@ -201,7 +187,7 @@ function ParagraphSize() {
               </DisclosureButton>
 
               <DisclosurePanel className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-                {violatingParagraphIds.map(id => ([id, allParagraphs[id]])).map(([index, para]) => (
+                {longParagraphs.map(([index, para]) => (
                   <div 
                     key={index} 
                     className="p-3 hover:bg-blue-50/30 transition-colors cursor-pointer group"
