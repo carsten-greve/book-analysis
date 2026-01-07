@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import nlp from 'compromise';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
-import { ChevronDown, FileText, Hash, AlignLeft } from 'lucide-react';
+import { ChevronDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
 import { sleep } from '../utils/timer';
 import TaskSection from './TaskSection';
 
 function ParagraphSize() {
   const [allParagraphs, setAllParagraphs] = useState({});
   const [violatingParagraphIds, setViolatingParagraphIds] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const getParagraphCache = (text) => {
     const doc = nlp(text);
@@ -75,67 +76,81 @@ function ParagraphSize() {
   // }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     const processInitialParagraphs = async () => {
-      await Word.run(async (context) => {
-        let initialParagraphs = {};
-        let initialViolatingParagraphIds = [];
+      try {
+        setIsLoading(true);
+        console.log('setIsLoading(true);');
 
-        // const paragraphs = context.document.body.paragraphs;
-        const paragraphs = context.document.paragraphs;
-        paragraphs.load("items");
-        if (isMounted){
-          await context.sync();
-        }
+        await Word.run(async (context) => {
+          let initialParagraphs = {};
+          let initialViolatingParagraphIds = [];
 
-        for (const paragraph of paragraphs.items) {
-          paragraph.load("text, uniqueLocalId");
-        }
-        if (isMounted){
-          await context.sync();
-        }
-
-        for (const paragraph of paragraphs.items) {
-          const paragraphCache = initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
-
-          if (isViolatingParagraph(paragraphCache)) {
-            console.log(`Found long paragraph with ${paragraphCache.sentenceCount} sentences.`);
-            initialViolatingParagraphIds.push(paragraph.uniqueLocalId);
+          // const paragraphs = context.document.body.paragraphs;
+          const paragraphs = context.document.paragraphs;
+          paragraphs.load("items");
+          if (!signal.aborted){
+            await context.sync();
           }
 
-          // if (sentenceCount > 12) {
-          //   if (isMounted) {
-          //     console.log(`Found long paragraph with ${sentenceCount} sentences.`);
-          //   }
-          //   initialParagraphs[paragraph.uniqueLocalId] = {
-          //     // paragraph,
-          //     sentenceCount,
-          //   };
-          //   paragraph.font.highlightColor = "Yellow";
-          // }
+          for (const paragraph of paragraphs.items) {
+            paragraph.load("text, uniqueLocalId");
+          }
+          if (!signal.aborted){
+            await context.sync();
+          }
 
-          context.trackedObjects.remove(paragraph);
-          await sleep(10);
-        };
+          for (const paragraph of paragraphs.items) {
+            const paragraphCache = initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
 
-        if (isMounted){
-          setAllParagraphs(initialParagraphs);
-          setViolatingParagraphIds(initialViolatingParagraphIds);
+            if (isViolatingParagraph(paragraphCache)) {
+              console.log(`Found long paragraph with ${paragraphCache.sentenceCount} sentences.`);
+              initialViolatingParagraphIds.push(paragraph.uniqueLocalId);
+            }
 
-          context.document.onParagraphChanged.add(paragraphChanged);
-          context.document.onParagraphAdded.add(paragraphAdded);
-          context.document.onParagraphDeleted.add(paragraphDeleted);
+            // if (sentenceCount > 12) {
+            //   if (!signal.aborted) {
+            //     console.log(`Found long paragraph with ${sentenceCount} sentences.`);
+            //   }
+            //   initialParagraphs[paragraph.uniqueLocalId] = {
+            //     // paragraph,
+            //     sentenceCount,
+            //   };
+            //   paragraph.font.highlightColor = "Yellow";
+            // }
 
-          await context.sync();
+            context.trackedObjects.remove(paragraph);
+            await sleep(10);
+          };
+
+          if (!signal.aborted){
+            setAllParagraphs(initialParagraphs);
+            setViolatingParagraphIds(initialViolatingParagraphIds);
+
+            console.log('onParagraph...');
+            context.document.onParagraphChanged.add(paragraphChanged);
+            context.document.onParagraphAdded.add(paragraphAdded);
+            context.document.onParagraphDeleted.add(paragraphDeleted);
+
+            await context.sync();
+          }
+        });
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!signal.aborted) {
+          setIsLoading(false);
+          console.log('setIsLoading(false);');
         }
-      });
+      }
     };
 
     processInitialParagraphs()
       .catch(console.error);
 
-    return () => isMounted = false;
+    return () => controller.abort();
   }, []);
 
   return (
@@ -158,9 +173,14 @@ function ParagraphSize() {
                 <div className="flex items-center gap-2">
                   <FileText size={16} className="text-blue-600" />
                   <span className="text-sm font-semibold text-slate-700">Long Paragraphs</span>
-                  <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
-                    {Object.keys(violatingParagraphIds).length}
-                  </span>
+                  {console.log(isLoading)}
+                  {isLoading ? (
+                    <Loader2 size={14} className="animate-spin text-slate-400" />
+                  ) : (
+                    <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
+                      {Object.keys(violatingParagraphIds).length}
+                    </span>
+                  )}
                 </div>
                 <ChevronDown 
                   size={16} 
