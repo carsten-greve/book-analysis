@@ -6,6 +6,8 @@ function TaskPane() {
     <div className="flex h-screen flex-col bg-white">
       {/* Scrollable Area for Tasks */}
       <div className="flex-1 overflow-y-auto">
+        <ParagraphSize></ParagraphSize>
+
         <TaskSection title="Paragraph Length Checker">
           <p className="mb-3 text-xs text-slate-500">
             Identify paragraphs with more than 10 sentences for readability.
@@ -30,8 +32,6 @@ function TaskPane() {
             </label>
           </div>
         </TaskSection>
-
-        <ParagraphSize></ParagraphSize>
       </div>
     </div>
   );

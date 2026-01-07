@@ -1,14 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import nlp from 'compromise';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { ChevronDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
 import { sleep } from '../utils/timer';
 import TaskSection from './TaskSection';
+import ParagraphSizeSettings from './ParagraphSizeSettings';
 
 function ParagraphSize() {
   const [allParagraphs, setAllParagraphs] = useState({});
   const [violatingParagraphIds, setViolatingParagraphIds] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [sentenceThreshold, setSentenceThreshold] = useState(10);
+  const [wordThreshold, setWordThreshold] = useState(150);
+
+  const isProcessing = isLoading || isPending;
 
   const getParagraphCache = (text) => {
     const doc = nlp(text);
@@ -23,27 +29,29 @@ function ParagraphSize() {
   const paragraphChanged = async (event) => {
     console.log('paragraphChanged called');
 
-    await Word.run(async (context) => {
-      for (const id of event.uniqueLocalIds) {
-        const paragraph = context.document.getParagraphByUniqueLocalId(id);
-        if (paragraph.isNullObject) {
-          continue;
-        }
+    startTransition(async () => {
+      await Word.run(async (context) => {
+        for (const id of event.uniqueLocalIds) {
+          const paragraph = context.document.getParagraphByUniqueLocalId(id);
+          if (paragraph.isNullObject) {
+            continue;
+          }
 
-        paragraph.load("text");
-        await context.sync();
+          paragraph.load("text");
+          await context.sync();
 
-        const paragraphCache = getParagraphCache(paragraph.text);
-        setAllParagraphs((prev) => ({ ...prev, id: paragraphCache }));
-        if (isViolatingParagraph(paragraphCache)) {
-          setViolatingParagraphIds((prev) => [...new Set([...prev, id])]);
-        } else {
-          const index = violatingParagraphIds.indexOf(id);
-          if (index >= 0) {
-            setViolatingParagraphIds((prev) => prev.toSpliced(index, 1));
+          const paragraphCache = getParagraphCache(paragraph.text);
+          setAllParagraphs((prev) => ({ ...prev, id: paragraphCache }));
+          if (isViolatingParagraph(paragraphCache)) {
+            setViolatingParagraphIds((prev) => [...new Set([...prev, id])]);
+          } else {
+            const index = violatingParagraphIds.indexOf(id);
+            if (index >= 0) {
+              setViolatingParagraphIds((prev) => prev.toSpliced(index, 1));
+            }
           }
         }
-      }
+      });
     });
   };
 
@@ -69,82 +77,82 @@ function ParagraphSize() {
   };
 
   const isViolatingParagraph = (paragraphCache) => {
-    return paragraphCache.sentenceCount > 12;
+    return paragraphCache.sentenceCount > sentenceThreshold || paragraphCache.wordCount > wordThreshold;
   };
 
-  // useEffect(() => {
-  // }, []);
+  const handleSettingsUpdate = (newThresholds) => {
+    setSentenceThreshold(newThresholds.sentences);
+    setWordThreshold(newThresholds.words);
+  };
 
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
 
     const processInitialParagraphs = async () => {
-      try {
-        setIsLoading(true);
-        console.log('setIsLoading(true);');
+      setIsLoading(true);
+      console.log('setIsLoading(true);');
 
-        await Word.run(async (context) => {
-          let initialParagraphs = {};
-          let initialViolatingParagraphIds = [];
+      await Word.run(async (context) => {
+        let initialParagraphs = {};
+        let initialViolatingParagraphIds = [];
 
-          // const paragraphs = context.document.body.paragraphs;
-          const paragraphs = context.document.paragraphs;
-          paragraphs.load("items");
-          if (!signal.aborted){
-            await context.sync();
+        // const paragraphs = context.document.body.paragraphs;
+        const paragraphs = context.document.paragraphs;
+        paragraphs.load("items");
+        if (!signal.aborted){
+          await context.sync();
+        }
+
+        for (const paragraph of paragraphs.items) {
+          paragraph.load("text, uniqueLocalId");
+        }
+        if (!signal.aborted){
+          await context.sync();
+        }
+
+        for (const paragraph of paragraphs.items) {
+          const paragraphCache = initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
+
+          if (isViolatingParagraph(paragraphCache)) {
+            console.log(`Found long paragraph with ${paragraphCache.sentenceCount} sentences.`);
+            initialViolatingParagraphIds.push(paragraph.uniqueLocalId);
           }
 
-          for (const paragraph of paragraphs.items) {
-            paragraph.load("text, uniqueLocalId");
-          }
-          if (!signal.aborted){
-            await context.sync();
-          }
+          // if (sentenceCount > 12) {
+          //   if (!signal.aborted) {
+          //     console.log(`Found long paragraph with ${sentenceCount} sentences.`);
+          //   }
+          //   initialParagraphs[paragraph.uniqueLocalId] = {
+          //     // paragraph,
+          //     sentenceCount,
+          //   };
+          //   paragraph.font.highlightColor = "Yellow";
+          // }
 
-          for (const paragraph of paragraphs.items) {
-            const paragraphCache = initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
+          context.trackedObjects.remove(paragraph);
+          await sleep(1);
+        };
 
-            if (isViolatingParagraph(paragraphCache)) {
-              console.log(`Found long paragraph with ${paragraphCache.sentenceCount} sentences.`);
-              initialViolatingParagraphIds.push(paragraph.uniqueLocalId);
-            }
+        if (!signal.aborted){
+          setAllParagraphs(initialParagraphs);
+          setViolatingParagraphIds(initialViolatingParagraphIds);
 
-            // if (sentenceCount > 12) {
-            //   if (!signal.aborted) {
-            //     console.log(`Found long paragraph with ${sentenceCount} sentences.`);
-            //   }
-            //   initialParagraphs[paragraph.uniqueLocalId] = {
-            //     // paragraph,
-            //     sentenceCount,
-            //   };
-            //   paragraph.font.highlightColor = "Yellow";
-            // }
+          console.log('onParagraph...');
+          context.document.onParagraphChanged.add(paragraphChanged);
+          context.document.onParagraphAdded.add(paragraphAdded);
+          context.document.onParagraphDeleted.add(paragraphDeleted);
 
-            context.trackedObjects.remove(paragraph);
-            await sleep(10);
-          };
-
-          if (!signal.aborted){
-            setAllParagraphs(initialParagraphs);
-            setViolatingParagraphIds(initialViolatingParagraphIds);
-
-            console.log('onParagraph...');
-            context.document.onParagraphChanged.add(paragraphChanged);
-            context.document.onParagraphAdded.add(paragraphAdded);
-            context.document.onParagraphDeleted.add(paragraphDeleted);
-
-            await context.sync();
-          }
-        });
-      } catch (error) {
+          await context.sync();
+        }
+      }).catch((error) => {
         console.error(error);
-      } finally {
+      }).finally(() => {
         if (!signal.aborted) {
           setIsLoading(false);
           console.log('setIsLoading(false);');
         }
-      }
+      });
     };
 
     processInitialParagraphs()
@@ -155,8 +163,13 @@ function ParagraphSize() {
 
   return (
     <TaskSection title="Paragraph Size">
+      <ParagraphSizeSettings
+        defaults={{ sentences: sentenceThreshold, words: wordThreshold }}
+        onSettingsChange={handleSettingsUpdate}
+      >
+      </ParagraphSizeSettings>
       <p className="mb-3 text-xs text-slate-500">
-        Identify paragraphs with more than 10 sentences for readability.
+        For readability, identify paragraphs exceeding {sentenceThreshold} sentences or {wordThreshold} words.
       </p>
       <button 
         className="w-full rounded bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700"
@@ -173,9 +186,8 @@ function ParagraphSize() {
                 <div className="flex items-center gap-2">
                   <FileText size={16} className="text-blue-600" />
                   <span className="text-sm font-semibold text-slate-700">Long Paragraphs</span>
-                  {console.log(isLoading)}
-                  {isLoading ? (
-                    <Loader2 size={14} className="animate-spin text-slate-400" />
+                  {isProcessing ? (
+                    <Loader2 size={14} className="ml-3 animate-spin text-slate-400" />
                   ) : (
                     <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
                       {Object.keys(violatingParagraphIds).length}
