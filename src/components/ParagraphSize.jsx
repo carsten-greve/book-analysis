@@ -1,20 +1,14 @@
-import { useState, useEffect, useTransition, useMemo } from 'react';
-import nlp from 'compromise';
+import { useState, useMemo } from 'react';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { ChevronDown, ChevronUp, ArrowUpDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
-import { sleep } from '../utils/timer';
+import { useApp } from './AppProvider';
 import TaskSection from './TaskSection';
 import ParagraphSizeSettings from './ParagraphSizeSettings';
 
 function ParagraphSize() {
-  const [allParagraphs, setAllParagraphs] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [sentenceThreshold, setSentenceThreshold] = useState(10);
-  const [wordThreshold, setWordThreshold] = useState(150);
   const [sortConfig, setSortConfig] = useState({ key: 'sentenceCount', direction: 'desc' });
 
-  const isProcessing = isLoading || isPending;
+  const { allParagraphs, isProcessing, sentenceThreshold, wordThreshold } = useApp();
 
   const isLongParagraph = (paragraphCache) => {
     return paragraphCache.sentenceCount > sentenceThreshold || paragraphCache.wordCount > wordThreshold;
@@ -29,13 +23,6 @@ function ParagraphSize() {
         return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
       });
   }, [allParagraphs, sentenceThreshold, wordThreshold, sortConfig]);
-
-  const handleSettingsUpdate = (newThresholds) => {
-    startTransition(() => {
-      setSentenceThreshold(newThresholds.sentences);
-      setWordThreshold(newThresholds.words);
-    });
-  };
 
   async function scrollToParagraph(targetId) {
     await Word.run(async (context) => {
@@ -62,110 +49,9 @@ function ParagraphSize() {
     setSortConfig({ key, direction });
   };
 
-  const getParagraphCache = (text) => {
-    const doc = nlp(text);
-
-    return {
-      text,
-      sentenceCount : doc.sentences().length,
-      wordCount : doc.wordCount(),
-    };
-  };
-
-  const paragraphChanged = async (event) => {
-    startTransition(async () => {
-      await Word.run(async (context) => {
-        for (const id of event.uniqueLocalIds) {
-          const paragraph = context.document.getParagraphByUniqueLocalId(id);
-          paragraph.load("text");
-          await context.sync();
-
-          if (paragraph.isNullObject) {
-            continue;
-          }
-
-          const paragraphCache = getParagraphCache(paragraph.text);
-          setAllParagraphs((prev) => ({ ...prev, [id]: paragraphCache }));
-        }
-      }).catch((error) => {
-        console.error(error)
-      });
-    });
-  };
-
-  const paragraphAdded = async (event) => {
-    await paragraphChanged(event);
-  };
-
-  const paragraphDeleted = async (event) => {
-    for (const id of event.uniqueLocalIds) {
-      setAllParagraphs(prev => {
-        const { [id]: removed, ...rest } = prev;
-        return rest;
-      });
-    }
-  };
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    const processInitialParagraphs = async () => {
-      setIsLoading(true);
-
-      await Word.run(async (context) => {
-        let initialParagraphs = {};
-
-        const paragraphs = context.document.paragraphs;
-        paragraphs.load("items");
-        if (!signal.aborted){
-          await context.sync();
-        }
-
-        for (const paragraph of paragraphs.items) {
-          paragraph.load("text, uniqueLocalId");
-        }
-        if (!signal.aborted){
-          await context.sync();
-        }
-
-        for (const paragraph of paragraphs.items) {
-          initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
-
-          context.trackedObjects.remove(paragraph);
-          await sleep(1);
-        };
-
-        if (!signal.aborted){
-          setAllParagraphs(initialParagraphs);
-
-          context.document.onParagraphChanged.add(paragraphChanged);
-          context.document.onParagraphAdded.add(paragraphAdded);
-          context.document.onParagraphDeleted.add(paragraphDeleted);
-
-          await context.sync();
-        }
-      }).catch((error) => {
-        console.error(error);
-      }).finally(() => {
-        if (!signal.aborted) {
-          setIsLoading(false);
-        }
-      });
-    };
-
-    processInitialParagraphs()
-      .catch(console.error);
-
-    return () => controller.abort();
-  }, []);
-
   return (
     <TaskSection title="Paragraph Size">
-      <ParagraphSizeSettings
-        defaults={{ sentences: sentenceThreshold, words: wordThreshold }}
-        onSettingsChange={handleSettingsUpdate}
-      >
+      <ParagraphSizeSettings>
       </ParagraphSizeSettings>
 
       <p className="pl-3 pb-2 text-xs text-slate-500 bg-slate-100/50">

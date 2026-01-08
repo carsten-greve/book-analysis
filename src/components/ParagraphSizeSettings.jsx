@@ -1,34 +1,8 @@
-import { useState, useEffect } from 'react';
 import { Settings, Hash, AlignLeft } from 'lucide-react';
+import { useApp } from './AppProvider';
 
-const ParagraphSizeSettings = ({ defaults, onSettingsChange }) => {
-  const [thresholds, setThresholds] = useState(defaults);
-
-  // Load persisted settings on mount
-  useEffect(() => {
-    Office.context.document.settings.refreshAsync(() => {
-      const savedSentences = Office.context.document.settings.get("sentenceThreshold");
-      const savedWords = Office.context.document.settings.get("wordThreshold");
-      
-      const newThresholds = {
-        sentences: savedSentences ?? defaults.sentences,
-        words: savedWords ?? defaults.words,
-      };
-      setThresholds(newThresholds);
-      onSettingsChange(newThresholds);
-    });
-  }, []);
-
-  const updateSetting = (key, value) => {
-    const newThresholds = { ...thresholds, [key]: parseInt(value, 10) || 0 };
-    setThresholds(newThresholds);
-    onSettingsChange(newThresholds);
-
-    // Persist to Word document settings
-    const settingsKey = key === 'sentences' ? "sentenceThreshold" : "wordThreshold";
-    Office.context.document.settings.set(settingsKey, newThresholds[key]);
-    Office.context.document.settings.saveAsync();
-  };
+const ParagraphSizeSettings = () => {
+  const { sentenceThreshold, updateSentenceThreshold, wordThreshold, updateWordThreshold } = useApp();
 
   return (
     <div className="p-3 space-y-4 bg-slate-50 border-t border-slate-200">
@@ -45,8 +19,8 @@ const ParagraphSizeSettings = ({ defaults, onSettingsChange }) => {
           <input 
             type="number"
             min="5"
-            value={thresholds.sentences}
-            onChange={(e) => updateSetting('sentences', e.target.value)}
+            value={sentenceThreshold}
+            onChange={(e) => updateSentenceThreshold(e.target.value)}
             className="w-full border border-slate-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
           />
         </div>
@@ -57,8 +31,8 @@ const ParagraphSizeSettings = ({ defaults, onSettingsChange }) => {
           <input 
             type="number"
             min="100"
-            value={thresholds.words}
-            onChange={(e) => updateSetting('words', e.target.value)}
+            value={wordThreshold}
+            onChange={(e) => updateWordThreshold(e.target.value)}
             className="w-full border border-slate-300 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
           />
         </div>
