@@ -37,6 +37,23 @@ function ParagraphSize() {
     });
   };
 
+  async function scrollToParagraph(targetId) {
+    await Word.run(async (context) => {
+      const paragraphs = context.document.body.paragraphs;
+      paragraphs.load("uniqueLocalId");
+      await context.sync();
+
+      const targetParagraph = paragraphs.items.find((paragraph) => paragraph.uniqueLocalId === targetId);
+      if (targetParagraph) {
+        targetParagraph.select(Word.SelectionMode.select);
+      } else {
+        console.warn("Paragraph with ID not found in this session.");
+      }
+
+      await context.sync();
+    });
+  }
+
   const requestSort = (key) => {
     let direction = 'desc';
     if (sortConfig.key === key && sortConfig.direction === 'desc') {
@@ -56,8 +73,6 @@ function ParagraphSize() {
   };
 
   const paragraphChanged = async (event) => {
-    console.log('paragraphChanged called');
-
     startTransition(async () => {
       await Word.run(async (context) => {
         for (const id of event.uniqueLocalIds) {
@@ -79,14 +94,10 @@ function ParagraphSize() {
   };
 
   const paragraphAdded = async (event) => {
-    console.log('paragraphAdded called');
-
     await paragraphChanged(event);
   };
 
   const paragraphDeleted = async (event) => {
-    console.log('paragraphDeleted called');
-
     for (const id of event.uniqueLocalIds) {
       setAllParagraphs(prev => {
         const { [id]: removed, ...rest } = prev;
@@ -101,12 +112,10 @@ function ParagraphSize() {
 
     const processInitialParagraphs = async () => {
       setIsLoading(true);
-      console.log('setIsLoading(true);');
 
       await Word.run(async (context) => {
         let initialParagraphs = {};
 
-        // const paragraphs = context.document.body.paragraphs;
         const paragraphs = context.document.paragraphs;
         paragraphs.load("items");
         if (!signal.aborted){
@@ -121,18 +130,7 @@ function ParagraphSize() {
         }
 
         for (const paragraph of paragraphs.items) {
-          const paragraphCache = initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
-
-          // if (sentenceCount > 12) {
-          //   if (!signal.aborted) {
-          //     console.log(`Found long paragraph with ${sentenceCount} sentences.`);
-          //   }
-          //   initialParagraphs[paragraph.uniqueLocalId] = {
-          //     // paragraph,
-          //     sentenceCount,
-          //   };
-          //   paragraph.font.highlightColor = "Yellow";
-          // }
+          initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
 
           context.trackedObjects.remove(paragraph);
           await sleep(1);
@@ -141,7 +139,6 @@ function ParagraphSize() {
         if (!signal.aborted){
           setAllParagraphs(initialParagraphs);
 
-          console.log('onParagraph...');
           context.document.onParagraphChanged.add(paragraphChanged);
           context.document.onParagraphAdded.add(paragraphAdded);
           context.document.onParagraphDeleted.add(paragraphDeleted);
@@ -153,7 +150,6 @@ function ParagraphSize() {
       }).finally(() => {
         if (!signal.aborted) {
           setIsLoading(false);
-          console.log('setIsLoading(false);');
         }
       });
     };
@@ -230,11 +226,11 @@ function ParagraphSize() {
               </DisclosureButton>
 
               <DisclosurePanel className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-                {longParagraphs.map(([index, para]) => (
+                {longParagraphs.map(([id, para]) => (
                   <div 
-                    key={index} 
+                    key={id} 
                     className="p-3 hover:bg-blue-50/30 transition-colors cursor-pointer group"
-                    onClick={() => /* logic to scroll Word to this paragraph */ {}}
+                    onClick={() => scrollToParagraph(id)}
                   >
                     <p className="truncate text-xs text-slate-600 italic mb-2 line-clamp-1 group-hover:text-slate-900 transition-colors">
                       "{para.text}"
