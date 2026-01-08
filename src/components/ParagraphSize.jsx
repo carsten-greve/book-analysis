@@ -167,39 +167,46 @@ function ParagraphSize() {
         onSettingsChange={handleSettingsUpdate}
       >
       </ParagraphSizeSettings>
+
       <p className="pl-3 pb-2 text-xs text-slate-500 bg-slate-100/50">
         Paragraphs exceeding {sentenceThreshold} sentences or {wordThreshold} words.
       </p>
-      <div className="flex items-center justify-between px-4 mb-2 py-2 bg-slate-100/50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-100/50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
         <span>Sort by:</span>
         <div className="flex gap-2">
-          {/* Sort by Sentences */}
-          <button 
-            onClick={() => requestSort('sentenceCount')}
-            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-              sortConfig.key === 'sentenceCount' ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-200'
-            }`}
-          >
-            <AlignLeft size={12} />
-            <span>Sentences</span>
-            {sortConfig.key === 'sentenceCount' ? (
-              sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
-            ) : <ArrowUpDown size={12} className="opacity-30" />}
-          </button>
+          {['sentenceCount', 'wordCount'].map((key) => {
+            const isActive = sortConfig.key === key;
+            const isAsc = sortConfig.direction === 'asc';
+            const label = key === 'sentenceCount' ? 'Sentences' : 'Words';
+            const Icon = key === 'sentenceCount' ? AlignLeft : Hash;
 
-          {/* Sort by Words */}
-          <button 
-            onClick={() => requestSort('wordCount')}
-            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-              sortConfig.key === 'wordCount' ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-200'
-            }`}
-          >
-            <Hash size={12} />
-            <span>Words</span>
-            {sortConfig.key === 'wordCount' ? (
-              sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
-            ) : <ArrowUpDown size={12} className="opacity-30" />}
-          </button>
+            return (
+              <button 
+                key={key}
+                onClick={() => requestSort(key)}
+                className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-200 ring-1 ${
+                  isActive 
+                    ? 'bg-blue-600 text-white ring-blue-600 shadow-sm' 
+                    : 'bg-white text-slate-600 ring-slate-200 hover:ring-blue-400 hover:text-blue-600'
+                }`}
+              >
+                <Icon size={12} className={isActive ? 'text-blue-100' : 'text-slate-400'} />
+                <span>{label}</span>
+                
+                <div className="relative flex items-center justify-center w-3 h-3">
+                  {isActive ? (
+                    <ChevronDown 
+                      size={14} 
+                      className={`transition-transform duration-300 ease-in-out ${isAsc ? 'rotate-180' : 'rotate-0'} group-hover:scale-175`} 
+                    />
+                  ) : (
+                    <ArrowUpDown size={12} className="opacity-40 group-hover:opacity-100" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
