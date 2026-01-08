@@ -1,7 +1,7 @@
 import { useState, useEffect, useTransition, useMemo } from 'react';
 import nlp from 'compromise';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
-import { ChevronDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, ArrowUpDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
 import { sleep } from '../utils/timer';
 import TaskSection from './TaskSection';
 import ParagraphSizeSettings from './ParagraphSizeSettings';
@@ -12,6 +12,7 @@ function ParagraphSize() {
   const [isPending, startTransition] = useTransition();
   const [sentenceThreshold, setSentenceThreshold] = useState(10);
   const [wordThreshold, setWordThreshold] = useState(150);
+  const [sortConfig, setSortConfig] = useState({ key: 'sentenceCount', direction: 'desc' });
 
   const isProcessing = isLoading || isPending;
 
@@ -20,14 +21,28 @@ function ParagraphSize() {
   };
 
   const longParagraphs = useMemo(() => {
-    return Object.entries(allParagraphs).filter(([id, paragraph]) => isLongParagraph(paragraph));
-  }, [allParagraphs, sentenceThreshold, wordThreshold]);
+    return Object.entries(allParagraphs)
+      .filter(([, paragraph]) => isLongParagraph(paragraph))
+      .sort((a, b) => {
+        const aVal = a[1][sortConfig.key];
+        const bVal = b[1][sortConfig.key];
+        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      });
+  }, [allParagraphs, sentenceThreshold, wordThreshold, sortConfig]);
 
   const handleSettingsUpdate = (newThresholds) => {
     startTransition(() => {
       setSentenceThreshold(newThresholds.sentences);
       setWordThreshold(newThresholds.words);
     });
+  };
+
+  const requestSort = (key) => {
+    let direction = 'desc';
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    setSortConfig({ key, direction });
   };
 
   const getParagraphCache = (text) => {
@@ -156,15 +171,41 @@ function ParagraphSize() {
         onSettingsChange={handleSettingsUpdate}
       >
       </ParagraphSizeSettings>
-      <p className="mb-3 text-xs text-slate-500">
+      <p className="pl-3 pb-2 text-xs text-slate-500 bg-slate-100/50">
         Paragraphs exceeding {sentenceThreshold} sentences or {wordThreshold} words.
       </p>
-      <button 
-        className="w-full rounded bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700"
-        onClick={() => {/* Call your Word API logic here */}}
-      >
-        Check Paragraphs
-      </button>
+      <div className="flex items-center justify-between px-4 mb-2 py-2 bg-slate-100/50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <span>Sort by:</span>
+        <div className="flex gap-2">
+          {/* Sort by Sentences */}
+          <button 
+            onClick={() => requestSort('sentenceCount')}
+            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
+              sortConfig.key === 'sentenceCount' ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-200'
+            }`}
+          >
+            <AlignLeft size={12} />
+            <span>Sentences</span>
+            {sortConfig.key === 'sentenceCount' ? (
+              sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+            ) : <ArrowUpDown size={12} className="opacity-30" />}
+          </button>
+
+          {/* Sort by Words */}
+          <button 
+            onClick={() => requestSort('wordCount')}
+            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
+              sortConfig.key === 'wordCount' ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-200'
+            }`}
+          >
+            <Hash size={12} />
+            <span>Words</span>
+            {sortConfig.key === 'wordCount' ? (
+              sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+            ) : <ArrowUpDown size={12} className="opacity-30" />}
+          </button>
+        </div>
+      </div>
 
       <div className="w-full border border-slate-200 rounded-lg overflow-hidden bg-white">
         <Disclosure defaultOpen={true}>
@@ -182,7 +223,7 @@ function ParagraphSize() {
                     </span>
                   )}
                 </div>
-                <ChevronDown 
+                <ChevronUp
                   size={16} 
                   className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} 
                 />
@@ -195,8 +236,8 @@ function ParagraphSize() {
                     className="p-3 hover:bg-blue-50/30 transition-colors cursor-pointer group"
                     onClick={() => /* logic to scroll Word to this paragraph */ {}}
                   >
-                    <p className="text-xs text-slate-600 italic mb-2 line-clamp-1 group-hover:text-slate-900 transition-colors">
-                      "{para.text.slice(0, 30)}..."
+                    <p className="truncate text-xs text-slate-600 italic mb-2 line-clamp-1 group-hover:text-slate-900 transition-colors">
+                      "{para.text}"
                     </p>
 
                     <div className="flex items-center gap-4 text-[11px] font-medium">
