@@ -34,7 +34,7 @@ function ParagraphSize() {
     const doc = nlp(text);
 
     return {
-      lead : text.slice(0, 20),
+      text,
       sentenceCount : doc.sentences().length,
       wordCount : doc.wordCount(),
     };
@@ -47,16 +47,18 @@ function ParagraphSize() {
       await Word.run(async (context) => {
         for (const id of event.uniqueLocalIds) {
           const paragraph = context.document.getParagraphByUniqueLocalId(id);
+          paragraph.load("text");
+          await context.sync();
+
           if (paragraph.isNullObject) {
             continue;
           }
 
-          paragraph.load("text");
-          await context.sync();
-
           const paragraphCache = getParagraphCache(paragraph.text);
           setAllParagraphs((prev) => ({ ...prev, [id]: paragraphCache }));
         }
+      }).catch((error) => {
+        console.error(error)
       });
     });
   };
@@ -155,7 +157,7 @@ function ParagraphSize() {
       >
       </ParagraphSizeSettings>
       <p className="mb-3 text-xs text-slate-500">
-        For readability, identify paragraphs exceeding {sentenceThreshold} sentences or {wordThreshold} words.
+        Paragraphs exceeding {sentenceThreshold} sentences or {wordThreshold} words.
       </p>
       <button 
         className="w-full rounded bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700"
@@ -193,18 +195,16 @@ function ParagraphSize() {
                     className="p-3 hover:bg-blue-50/30 transition-colors cursor-pointer group"
                     onClick={() => /* logic to scroll Word to this paragraph */ {}}
                   >
-                    {/* Lead Text */}
                     <p className="text-xs text-slate-600 italic mb-2 line-clamp-1 group-hover:text-slate-900 transition-colors">
-                      "{para.lead}..."
+                      "{para.text.slice(0, 30)}..."
                     </p>
 
-                    {/* Metadata Row */}
                     <div className="flex items-center gap-4 text-[11px] font-medium">
-                      <div className="flex items-center gap-1 text-slate-500">
+                      <div className={"flex items-center gap-1 " + (para.sentenceCount > sentenceThreshold ? "text-red-500" : "text-slate-500")}>
                         <AlignLeft size={12} className="text-slate-400" />
                         <span>{para.sentenceCount} sentences</span>
                       </div>
-                      <div className="flex items-center gap-1 text-slate-500 border-l border-slate-200 pl-4">
+                      <div className={"flex items-center gap-1 border-l border-slate-200 pl-4 " + (para.wordCount > wordThreshold ? "text-red-500" : "text-slate-500")}>
                         <Hash size={12} className="text-slate-400" />
                         <span>{para.wordCount} words</span>
                       </div>
