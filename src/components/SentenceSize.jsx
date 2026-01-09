@@ -3,28 +3,30 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react
 import { ChevronDown, ChevronUp, ArrowUpDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
 import { useApp } from './AppProvider';
 import TaskSection from './TaskSection';
-import ParagraphSizeSettings from './ParagraphSizeSettings';
+import SentenceSizeSettings from './SentenceSizeSettings';
 
-function ParagraphSize() {
-  const [sortConfig, setSortConfig] = useState({ key: 'sentenceCount', direction: 'desc' });
+function SentenceSize() {
+  const [sortConfig, setSortConfig] = useState({ key: 'sentenceWordCount', direction: 'desc' });
 
-  const { allParagraphs, isProcessing, sentenceThreshold, wordThreshold } = useApp();
+  const { allParagraphs, isProcessing, sentenceWordThreshold, sentenceCharacterThreshold } = useApp();
 
-  const isLongParagraph = (paragraphCache) => {
-    return paragraphCache.sentenceCount > sentenceThreshold || paragraphCache.wordCount > wordThreshold;
+  const isLongSentence = (sentenceCache) => {
+    return sentenceCache.sentenceWordCount > sentenceWordThreshold || sentenceCache.sentenceCharacterCount > sentenceCharacterThreshold;
   };
 
-  const longParagraphs = useMemo(() => {
+  const longSentences = useMemo(() => {
     return Object.entries(allParagraphs)
-      .filter(([, paragraph]) => isLongParagraph(paragraph))
+      .flatMap(([id, paragraphCache]) => paragraphCache.sentences.map((sentenceCache, i) => [id, i, sentenceCache]))
+      .filter(([,, sentenceCache]) => isLongSentence(sentenceCache))
       .sort((a, b) => {
-        const aVal = a[1][sortConfig.key];
-        const bVal = b[1][sortConfig.key];
+        const aVal = a[2][sortConfig.key];
+        const bVal = b[2][sortConfig.key];
         return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
       });
-  }, [allParagraphs, sentenceThreshold, wordThreshold, sortConfig]);
+  }, [allParagraphs, sentenceWordThreshold, sentenceCharacterThreshold, sortConfig]);
 
-  async function scrollToParagraph(targetId) {
+  async function scrollToParagraph(targetId, i, sentenceCache) {
+    console.log(sentenceCache);
     await Word.run(async (context) => {
       const paragraphs = context.document.body.paragraphs;
       paragraphs.load("uniqueLocalId");
@@ -50,21 +52,21 @@ function ParagraphSize() {
   };
 
   return (
-    <TaskSection title="Long Paragraphs">
-      <ParagraphSizeSettings />
+    <TaskSection title="Long Sentences">
+      <SentenceSizeSettings />
 
       <p className="pl-3 pb-2 text-xs text-slate-500 bg-slate-100/50">
-        Paragraphs exceeding {sentenceThreshold} sentences or {wordThreshold} words.
+        Sentences exceeding {sentenceWordThreshold} words or {sentenceCharacterThreshold} characters.
       </p>
 
       <div className="flex items-center justify-between px-3 py-2 bg-slate-100/50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
         <span>Sort by:</span>
         <div className="flex gap-2">
-          {['sentenceCount', 'wordCount'].map((key) => {
+          {['sentenceWordCount', 'sentenceCharacterCount'].map((key) => {
             const isActive = sortConfig.key === key;
             const isAsc = sortConfig.direction === 'asc';
-            const label = key === 'sentenceCount' ? 'Sentences' : 'Words';
-            const Icon = key === 'sentenceCount' ? AlignLeft : Hash;
+            const label = key === 'sentenceWordCount' ? 'Words' : 'Characters';
+            const Icon = key === 'sentenceWordCount' ? AlignLeft : Hash;
 
             return (
               <button 
@@ -102,12 +104,12 @@ function ParagraphSize() {
               <DisclosureButton className="flex w-full items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100  transition-colors border-b border-slate-200">
                 <div className="flex items-center gap-2">
                   <FileText size={16} className="text-blue-600" />
-                  <span className="text-sm font-semibold text-slate-700">Long Paragraphs</span>
+                  <span className="text-sm font-semibold text-slate-700">Long Sentences</span>
                   {isProcessing ? (
                     <Loader2 size={14} className="ml-3 animate-spin text-slate-400" />
                   ) : (
                     <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
-                      {longParagraphs.length}
+                      {longSentences.length}
                     </span>
                   )}
                 </div>
@@ -118,24 +120,24 @@ function ParagraphSize() {
               </DisclosureButton>
 
               <DisclosurePanel className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-                {longParagraphs.map(([id, para]) => (
+                {longSentences.map(([id, i, sentenceCache]) => (
                   <div 
-                    key={id} 
+                    key={id+i} 
                     className="p-3 hover:bg-blue-50/30 transition-colors cursor-pointer group"
-                    onClick={() => scrollToParagraph(id)}
+                    onClick={() => scrollToParagraph(id, i, sentenceCache)}
                   >
                     <p className="truncate text-xs text-slate-600 italic mb-2 line-clamp-1 group-hover:text-slate-900 transition-colors">
-                      "{para.text}"
+                      "{sentenceCache.text}"
                     </p>
 
                     <div className="flex items-center gap-4 text-[11px] font-medium">
-                      <div className={"flex items-center gap-1 " + (para.sentenceCount > sentenceThreshold ? "text-red-500" : "text-slate-500")}>
+                      <div className={"flex items-center gap-1 " + (sentenceCache.sentenceWordCount > sentenceWordThreshold ? "text-red-500" : "text-slate-500")}>
                         <AlignLeft size={12} className="text-slate-400" />
-                        <span>{para.sentenceCount} sentences</span>
+                        <span>{sentenceCache.sentenceWordCount} words</span>
                       </div>
-                      <div className={"flex items-center gap-1 border-l border-slate-200 pl-4 " + (para.wordCount > wordThreshold ? "text-red-500" : "text-slate-500")}>
+                      <div className={"flex items-center gap-1 border-l border-slate-200 pl-4 " + (sentenceCache.sentenceCharacterCount > sentenceCharacterThreshold ? "text-red-500" : "text-slate-500")}>
                         <Hash size={12} className="text-slate-400" />
-                        <span>{para.wordCount} words</span>
+                        <span>{sentenceCache.sentenceCharacterCount} characters</span>
                       </div>
                     </div>
                   </div>
@@ -149,4 +151,4 @@ function ParagraphSize() {
   );
 }
 
-export default ParagraphSize
+export default SentenceSize

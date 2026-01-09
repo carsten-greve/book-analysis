@@ -10,6 +10,8 @@ export const AppProvider = ({ children }) => {
   const [isPending, startTransition] = useTransition();
   const [sentenceThreshold, setSentenceThreshold] = useState(10);
   const [wordThreshold, setWordThreshold] = useState(150);
+  const [sentenceWordThreshold, setSentenceWordThreshold] = useState(30);
+  const [sentenceCharacterThreshold, setSentenceCharacterThreshold] = useState(150);
 
   const isProcessing = isLoading || isPending;
 
@@ -25,6 +27,8 @@ export const AppProvider = ({ children }) => {
 
   const updateSentenceThreshold = value => updateSetting("sentenceThreshold", value, setSentenceThreshold);
   const updateWordThreshold = value => updateSetting("wordThreshold", value, setWordThreshold);
+  const updateSentenceWordThreshold = value => updateSetting("sentenceWordThreshold", value, setSentenceWordThreshold);
+  const updateSentenceCharacterThreshold = value => updateSetting("sentenceCharacterThreshold", value, setSentenceCharacterThreshold);
 
   const updateSetting = (name, value, setState) => {
     startTransition(() => {
@@ -36,12 +40,18 @@ export const AppProvider = ({ children }) => {
   }
 
   const getParagraphCache = (text) => {
-    const doc = nlp(text);
+    const doc = nlp(text.replace(/["“”'‘’]+/g, '')); // compromise.nlp gets confused by quotes. Cannot work out sentences.
+    const sentences = doc.sentences();
 
     return {
       text,
-      sentenceCount : doc.sentences().length,
+      sentenceCount : sentences.length,
       wordCount : doc.wordCount(),
+      sentences : [...sentences.json().map(s => ({
+        text : s.text,
+        sentenceWordCount : nlp(s.text).wordCount(),
+        sentenceCharacterCount : s.text.length,
+      }))],
     };
   };
 
@@ -128,6 +138,10 @@ export const AppProvider = ({ children }) => {
       updateSentenceThreshold,
       wordThreshold,
       updateWordThreshold,
+      sentenceWordThreshold,
+      updateSentenceWordThreshold,
+      sentenceCharacterThreshold,
+      updateSentenceCharacterThreshold,
     }}>
       {children}
     </AppContext.Provider>

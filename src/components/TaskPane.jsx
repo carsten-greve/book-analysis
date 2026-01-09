@@ -1,12 +1,15 @@
 import TaskSection from './TaskSection';
 import ParagraphSize from './ParagraphSize';
+import SentenceSize from './SentenceSize';
 
 function TaskPane() {
   return (
     <div className="flex h-screen flex-col bg-white">
       {/* Scrollable Area for Tasks */}
       <div className="flex-1 overflow-y-auto">
-        <ParagraphSize></ParagraphSize>
+        <ParagraphSize />
+
+        <SentenceSize />
 
         <TaskSection title="Paragraph Length Checker">
           <p className="mb-3 text-xs text-slate-500">
