@@ -40,7 +40,7 @@ export const AppProvider = ({ children }) => {
   }
 
   const getParagraphCache = (text) => {
-    const doc = nlp(text.replace(/["“”'‘’]+/g, '')); // compromise.nlp gets confused by quotes. Cannot work out sentences.
+    const doc = nlp(text.replace(/["“”'‘]+/g, '').replace(/(?<![a-zA-Z])’/g, '')); // compromise.nlp gets confused by quotes. Cannot work out sentences.
     const sentences = doc.sentences();
 
     return {

@@ -34,7 +34,12 @@ function SentenceSize() {
 
       const targetParagraph = paragraphs.items.find((paragraph) => paragraph.uniqueLocalId === targetId);
       if (targetParagraph) {
-        targetParagraph.select(Word.SelectionMode.select);
+        const results = targetParagraph.search(sentenceCache.text.substring(0, 255), { matchCase: false, ignorePunct: true, ignoreSpace: true });
+        results.load("items");
+        await context.sync();
+
+        let range = results.items.length > 0 ? results.items[0] : targetParagraph;
+        range.select(Word.SelectionMode.select);
       } else {
         console.warn("Paragraph with ID not found in this session.");
       }
