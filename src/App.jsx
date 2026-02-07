@@ -1,9 +1,7 @@
-import TaskPane from './components/TaskPane';
+import { TaskPane } from './components/TaskPane';
 
-function App() {
+export const App = () => {
   return (
     <TaskPane />
   );
 }
-
-export default App

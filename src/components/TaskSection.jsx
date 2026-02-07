@@ -1,7 +1,7 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { ChevronRight } from 'lucide-react';
 
-function TaskSection({ title, children }) {
+export const TaskSection = ({ title, children }) => {
   return (
       <Disclosure as="div" className="w-full border-b border-slate-200">
         {({ open }) => (
@@ -18,5 +18,3 @@ function TaskSection({ title, children }) {
       </Disclosure>
   );
 }
-
-export default TaskSection

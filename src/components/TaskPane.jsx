@@ -1,8 +1,9 @@
-import TaskSection from './TaskSection';
-import ParagraphSize from './ParagraphSize';
-import SentenceSize from './SentenceSize';
+import { TaskSection } from './TaskSection';
+import { ParagraphSize } from './ParagraphSize';
+import { SentenceSize } from './SentenceSize';
+import { UnmatchedQuote } from './UnmatchedQuote';
 
-function TaskPane() {
+export const TaskPane = () => {
   return (
     <div className="flex h-screen flex-col bg-white">
       {/* Scrollable Area for Tasks */}
@@ -10,6 +11,8 @@ function TaskPane() {
         <ParagraphSize />
 
         <SentenceSize />
+
+        <UnmatchedQuote />
 
         <TaskSection title="Paragraph Length Checker">
           <p className="mb-3 text-xs text-slate-500">
@@ -39,5 +42,3 @@ function TaskPane() {
     </div>
   );
 }
-
-export default TaskPane

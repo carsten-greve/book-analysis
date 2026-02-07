@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { ChevronDown, ChevronUp, ArrowUpDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
-import { useApp } from './AppProvider';
-import TaskSection from './TaskSection';
-import ParagraphSizeSettings from './ParagraphSizeSettings';
+import { useApp } from '../AppProvider';
+import { TaskSection } from './TaskSection';
+import { ParagraphSizeSettings } from './ParagraphSizeSettings';
+import { scrollToParagraph } from '../utils/scrollTo';
 
-function ParagraphSize() {
+export const ParagraphSize = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'sentenceCount', direction: 'desc' });
 
   const { allParagraphs, isProcessing, sentenceThreshold, wordThreshold } = useApp();
@@ -23,23 +24,6 @@ function ParagraphSize() {
         return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
       });
   }, [allParagraphs, sentenceThreshold, wordThreshold, sortConfig]);
-
-  async function scrollToParagraph(targetId) {
-    await Word.run(async (context) => {
-      const paragraphs = context.document.body.paragraphs;
-      paragraphs.load("uniqueLocalId");
-      await context.sync();
-
-      const targetParagraph = paragraphs.items.find((paragraph) => paragraph.uniqueLocalId === targetId);
-      if (targetParagraph) {
-        targetParagraph.select(Word.SelectionMode.select);
-      } else {
-        console.warn("Paragraph with ID not found in this session.");
-      }
-
-      await context.sync();
-    });
-  }
 
   const requestSort = (key) => {
     let direction = 'desc';
@@ -148,5 +132,3 @@ function ParagraphSize() {
     </TaskSection>
   );
 }
-
-export default ParagraphSize

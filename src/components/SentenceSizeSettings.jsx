@@ -1,7 +1,7 @@
 import { Settings, Hash, AlignLeft } from 'lucide-react';
-import { useApp } from './AppProvider';
+import { useApp } from '../AppProvider';
 
-const SentenceSizeSettings = () => {
+export const SentenceSizeSettings = () => {
   const {
     sentenceWordThreshold,
     updateSentenceWordThreshold,
@@ -45,5 +45,3 @@ const SentenceSizeSettings = () => {
     </div>
   );
 };
-
-export default SentenceSizeSettings

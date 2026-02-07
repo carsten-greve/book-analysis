@@ -1,6 +1,6 @@
 import { createContext, useState, useContext, useTransition, useEffect } from 'react';
-import nlp from 'compromise';
-import { sleep } from '../utils/timer';
+import { getParagraphCache } from './utils/paragraphCache';
+import { sleep } from './utils/timer';
 
 const AppContext = createContext();
 
@@ -12,6 +12,7 @@ export const AppProvider = ({ children }) => {
   const [wordThreshold, setWordThreshold] = useState(150);
   const [sentenceWordThreshold, setSentenceWordThreshold] = useState(30);
   const [sentenceCharacterThreshold, setSentenceCharacterThreshold] = useState(150);
+  const [quoteExceptions, setQuoteExceptions] = useState([]);
 
   const isProcessing = isLoading || isPending;
 
@@ -29,6 +30,7 @@ export const AppProvider = ({ children }) => {
   const updateWordThreshold = value => updateSetting("wordThreshold", value, setWordThreshold);
   const updateSentenceWordThreshold = value => updateSetting("sentenceWordThreshold", value, setSentenceWordThreshold);
   const updateSentenceCharacterThreshold = value => updateSetting("sentenceCharacterThreshold", value, setSentenceCharacterThreshold);
+  const updateQuoteExceptions = value => updateSetting("quoteExceptions", value, setQuoteExceptions);
 
   const updateSetting = (name, value, setState) => {
     startTransition(() => {
@@ -38,22 +40,6 @@ export const AppProvider = ({ children }) => {
       Office.context.document.settings.saveAsync();
     });
   }
-
-  const getParagraphCache = (text) => {
-    const doc = nlp(text.replace(/["“”'‘]+/g, '').replace(/(?<![a-zA-Z])’/g, '')); // compromise.nlp gets confused by quotes. Cannot work out sentences.
-    const sentences = doc.sentences();
-
-    return {
-      text,
-      sentenceCount : sentences.length,
-      wordCount : doc.wordCount(),
-      sentences : [...sentences.json().map(s => ({
-        text : s.text,
-        sentenceWordCount : nlp(s.text).wordCount(),
-        sentenceCharacterCount : s.text.length,
-      }))],
-    };
-  };
 
   const handleParagraphChange = async (event) => {
     await Word.run(async (context) => {
@@ -142,6 +128,8 @@ export const AppProvider = ({ children }) => {
       updateSentenceWordThreshold,
       sentenceCharacterThreshold,
       updateSentenceCharacterThreshold,
+      quoteExceptions,
+      updateQuoteExceptions,
     }}>
       {children}
     </AppContext.Provider>

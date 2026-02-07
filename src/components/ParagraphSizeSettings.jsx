@@ -1,7 +1,7 @@
 import { Settings, Hash, AlignLeft } from 'lucide-react';
-import { useApp } from './AppProvider';
+import { useApp } from '../AppProvider';
 
-const ParagraphSizeSettings = () => {
+export const ParagraphSizeSettings = () => {
   const { sentenceThreshold, updateSentenceThreshold, wordThreshold, updateWordThreshold } = useApp();
 
   return (
@@ -40,5 +40,3 @@ const ParagraphSizeSettings = () => {
     </div>
   );
 };
-
-export default ParagraphSizeSettings

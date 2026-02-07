@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { ChevronDown, ChevronUp, ArrowUpDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
-import { useApp } from './AppProvider';
-import TaskSection from './TaskSection';
-import SentenceSizeSettings from './SentenceSizeSettings';
+import { useApp } from '../AppProvider';
+import { TaskSection } from './TaskSection';
+import { SentenceSizeSettings } from './SentenceSizeSettings';
+import { scrollToSentenceInParagraph } from '../utils/scrollTo';
 
-function SentenceSize() {
+export const SentenceSize = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'sentenceWordCount', direction: 'desc' });
 
   const { allParagraphs, isProcessing, sentenceWordThreshold, sentenceCharacterThreshold } = useApp();
@@ -24,29 +25,6 @@ function SentenceSize() {
         return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
       });
   }, [allParagraphs, sentenceWordThreshold, sentenceCharacterThreshold, sortConfig]);
-
-  async function scrollToParagraph(targetId, i, sentenceCache) {
-    console.log(sentenceCache);
-    await Word.run(async (context) => {
-      const paragraphs = context.document.body.paragraphs;
-      paragraphs.load("uniqueLocalId");
-      await context.sync();
-
-      const targetParagraph = paragraphs.items.find((paragraph) => paragraph.uniqueLocalId === targetId);
-      if (targetParagraph) {
-        const results = targetParagraph.search(sentenceCache.text.substring(0, 255), { matchCase: false, ignorePunct: true, ignoreSpace: true });
-        results.load("items");
-        await context.sync();
-
-        let range = results.items.length > 0 ? results.items[0] : targetParagraph;
-        range.select(Word.SelectionMode.select);
-      } else {
-        console.warn("Paragraph with ID not found in this session.");
-      }
-
-      await context.sync();
-    });
-  }
 
   const requestSort = (key) => {
     let direction = 'desc';
@@ -129,7 +107,7 @@ function SentenceSize() {
                   <div 
                     key={id+i} 
                     className="p-3 hover:bg-blue-50/30 transition-colors cursor-pointer group"
-                    onClick={() => scrollToParagraph(id, i, sentenceCache)}
+                    onClick={() => scrollToSentenceInParagraph(id, sentenceCache)}
                   >
                     <p className="truncate text-xs text-slate-600 italic mb-2 line-clamp-1 group-hover:text-slate-900 transition-colors">
                       "{sentenceCache.text}"
@@ -155,5 +133,3 @@ function SentenceSize() {
     </TaskSection>
   );
 }
-
-export default SentenceSize
