@@ -10,14 +10,29 @@ export const UnmatchedQuote = () => {
   const { allParagraphs, isProcessing, quoteExceptions } = useApp();
 
   const unmatchedQuotes = (text) => {
+    // Normalize curly single quotes to straight ones for easier matching
+    let normalized = text.replace(/[‘’]/g, "'");
+
+    // Prepare the text by removing all global exceptions
+    // Escape special characters to prevent regex errors (e.g., the quote itself)
+    const escapedExceptions = quoteExceptions.map(ex => 
+      ex.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    );
+
+    // Create a regex to match any of these words globally
+    const exceptionRegex = new RegExp(`(^|[^a-zA-Z0-9'])(${escapedExceptions.join('|')})([^a-zA-Z0-9]|$)`, 'gi');
+
+    // This 'cleanText' won't contain the troublesome quotes
+    const cleanText = normalized.replace(exceptionRegex, "$1$3");
+
     // Double Quotes: Count both straight (") and curly (“ ”)
-    const doubleQuoteCount = (text.match(/"|“|”/g) || []).length;
+    const doubleQuoteCount = (cleanText.match(/"|“|”/g) || []).length;
 
     // Single Quotes: Use regex to ignore contractions
     // This regex looks for ' or ‘ or ’ ONLY when they are NOT 
     // surrounded by letters on both sides (disregarding "don't").
     const singleQuotePattern = /(^|[^a-zA-Z])['‘]|['’]([^a-zA-Z]|$)/g;
-    const singleQuoteMatches = text.match(singleQuotePattern) || [];
+    const singleQuoteMatches = cleanText.match(singleQuotePattern) || [];
     const singleQuoteCount = singleQuoteMatches.length;
 
     return { singleQuoteCount, doubleQuoteCount };
@@ -26,7 +41,7 @@ export const UnmatchedQuote = () => {
   const paragraphsWithUnmatchedQuote = useMemo(() => {
     return Object.entries(allParagraphs)
       .map(([id, paragraphCache]) => [id, { ...paragraphCache, ...unmatchedQuotes(paragraphCache.text) }])
-      .filter(([, paragraph]) => paragraph.singleQuoteCount || paragraph.doubleQuoteCount);
+      .filter(([, paragraph]) => paragraph.singleQuoteCount % 2 || paragraph.doubleQuoteCount % 2);
   }, [allParagraphs, quoteExceptions]);
 
   return (
