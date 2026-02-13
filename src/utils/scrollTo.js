@@ -15,7 +15,7 @@ export const scrollToParagraph = async (targetId) => {
   });
 }
 
-export const scrollToSentenceInParagraph = async (targetId, sentenceCache) => {
+export const scrollToTextInParagraph = async (targetId, text) => {
   await Word.run(async (context) => {
     const paragraphs = context.document.body.paragraphs;
     paragraphs.load("uniqueLocalId");
@@ -24,7 +24,7 @@ export const scrollToSentenceInParagraph = async (targetId, sentenceCache) => {
     const targetParagraph = paragraphs.items.find((paragraph) => paragraph.uniqueLocalId === targetId);
     if (targetParagraph) {
       const results = targetParagraph.search(
-        sentenceCache.text.substring(0, 255),
+        text.substring(0, 255),
         { matchCase: false, ignorePunct: true, ignoreSpace: true }
       );
       results.load("items");

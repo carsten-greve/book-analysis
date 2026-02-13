@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
-import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
-import { ChevronDown, ChevronUp, ArrowUpDown, FileText, Hash, AlignLeft, Loader2 } from 'lucide-react';
+import { Disclosure, DisclosurePanel } from '@headlessui/react';
+import { ChevronDown, ArrowUpDown, Hash, AlignLeft } from 'lucide-react';
 import { useApp } from '../AppProvider';
 import { TaskSection } from './TaskSection';
 import { SentenceSizeSettings } from './SentenceSizeSettings';
-import { scrollToSentenceInParagraph } from '../utils/scrollTo';
+import { scrollToTextInParagraph } from '../utils/scrollTo';
+import { ResultHeader } from './ResultHeader';
 
 export const SentenceSize = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'sentenceWordCount', direction: 'desc' });
 
-  const { allParagraphs, isProcessing, sentenceWordThreshold, sentenceCharacterThreshold } = useApp();
+  const { allParagraphs, sentenceWordThreshold, sentenceCharacterThreshold } = useApp();
 
   const isLongSentence = (sentenceCache) => {
     return sentenceCache.sentenceWordCount > sentenceWordThreshold || sentenceCache.sentenceCharacterCount > sentenceCharacterThreshold;
@@ -84,30 +85,14 @@ export const SentenceSize = () => {
         <Disclosure defaultOpen={true}>
           {({ open }) => (
             <>
-              <DisclosureButton className="flex w-full items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100  transition-colors border-b border-slate-200">
-                <div className="flex items-center gap-2">
-                  <FileText size={16} className="text-blue-600" />
-                  <span className="text-sm font-semibold text-slate-700">Long Sentences</span>
-                  {isProcessing ? (
-                    <Loader2 size={14} className="ml-3 animate-spin text-slate-400" />
-                  ) : (
-                    <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
-                      {longSentences.length}
-                    </span>
-                  )}
-                </div>
-                <ChevronUp
-                  size={16} 
-                  className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} 
-                />
-              </DisclosureButton>
+              <ResultHeader open={open} text={"Long Sentences"} count={longSentences.length} />
 
               <DisclosurePanel className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
                 {longSentences.map(([id, i, sentenceCache]) => (
                   <div 
                     key={id+i} 
                     className="p-3 hover:bg-blue-50/30 transition-colors cursor-pointer group"
-                    onClick={() => scrollToSentenceInParagraph(id, sentenceCache)}
+                    onClick={() => scrollToTextInParagraph(id, sentenceCache.text)}
                   >
                     <p className="truncate text-xs text-slate-600 italic mb-2 line-clamp-1 group-hover:text-slate-900 transition-colors">
                       "{sentenceCache.text}"

@@ -13,6 +13,14 @@ export const AppProvider = ({ children }) => {
   const [sentenceWordThreshold, setSentenceWordThreshold] = useState(30);
   const [sentenceCharacterThreshold, setSentenceCharacterThreshold] = useState(150);
   const [quoteExceptions, setQuoteExceptions] = useState([]);
+  const [commonMisspellings, setCommonMisspellings] = useState([
+    ["bare", "bear"],
+    ["its", "it's"],
+    ["brought", "bought"],
+    ["accept", "except"],
+    ["affect", "effect"],
+    ["forward", "forwards"],
+  ]);
 
   const isProcessing = isLoading || isPending;
 
@@ -23,12 +31,14 @@ export const AppProvider = ({ children }) => {
       const savedSentenceWordThreshold = Office.context.document.settings.get("sentenceWordThreshold");
       const savedSentenceCharacterThreshold = Office.context.document.settings.get("sentenceCharacterThreshold");
       const savedQuoteExceptions = Office.context.document.settings.get("quoteExceptions");
+      const savedCommonMisspellings = Office.context.document.settings.get("commonMisspellings");
 
       setSentenceThreshold(prev => savedSentenceThreshold ?? prev);
       setWordThreshold(prev => savedWordThreshold ?? prev);
       setSentenceWordThreshold(prev => savedSentenceWordThreshold ?? prev);
       setSentenceCharacterThreshold(prev => savedSentenceCharacterThreshold ?? prev);
       setQuoteExceptions(prev => savedQuoteExceptions ?? prev);
+      setCommonMisspellings(prev => savedCommonMisspellings ?? prev);
     });
   }, []);
 
@@ -37,6 +47,7 @@ export const AppProvider = ({ children }) => {
   const updateSentenceWordThreshold = value => updateSetting("sentenceWordThreshold", value, setSentenceWordThreshold);
   const updateSentenceCharacterThreshold = value => updateSetting("sentenceCharacterThreshold", value, setSentenceCharacterThreshold);
   const updateQuoteExceptions = value => updateSetting("quoteExceptions", value, setQuoteExceptions);
+  const updateCommonMisspellings = value => updateSetting("commonMisspellings", value, setCommonMisspellings);
 
   const updateSetting = (name, value, setState) => {
     startTransition(() => {
@@ -136,6 +147,8 @@ export const AppProvider = ({ children }) => {
       updateSentenceCharacterThreshold,
       quoteExceptions,
       updateQuoteExceptions,
+      commonMisspellings,
+      updateCommonMisspellings,
     }}>
       {children}
     </AppContext.Provider>

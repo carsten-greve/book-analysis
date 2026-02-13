@@ -1,6 +1,7 @@
 import { ParagraphSize } from './ParagraphSize';
 import { SentenceSize } from './SentenceSize';
 import { UnmatchedQuote } from './UnmatchedQuote';
+import { CommonMisspelling } from './CommonMisspelling';
 
 export const TaskPane = () => {
   return (
@@ -11,6 +12,8 @@ export const TaskPane = () => {
         <SentenceSize />
 
         <UnmatchedQuote />
+
+        <CommonMisspelling />
       </div>
     </div>
   );
