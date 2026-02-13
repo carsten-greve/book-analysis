@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Settings, X } from 'lucide-react';
 import { useApp } from '../AppProvider';
 
-export const UnmatchedQuoteSettings = () => {
+export const UnmatchedQuoteSettings = ({showSingle, setShowSingle, showDouble, setShowDouble}) => {
   const [inputValue, setInputValue] = useState("");
 
   const { quoteExceptions, updateQuoteExceptions } = useApp();
@@ -73,6 +73,26 @@ export const UnmatchedQuoteSettings = () => {
       <p className="mt-3 text-[10px] text-slate-500 leading-tight">
         *Words in this list are ignored during quote analysis, even if they use smart quotes (’).
       </p>
+      <div className="space-y-2">
+        <label className="flex items-center space-x-2 text-xs">
+          <input
+            type="checkbox"
+            className="rounded text-blue-600"
+            checked={showSingle}
+            onChange={() => setShowSingle(!showSingle)}
+          />
+          <span>Show unmatched single quotes</span>
+        </label>
+        <label className="flex items-center space-x-2 text-xs">
+          <input
+            type="checkbox"
+            className="rounded text-blue-600"
+            checked={showDouble}
+            onChange={() => setShowDouble(!showDouble)}
+          />
+          <span>Show unmatched double quotes</span>
+        </label>
+      </div>
     </div>
   );
 };

@@ -12,6 +12,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@tailwindcss/vite": "^4.1.18",
+    "clsx": "^2.1.1",
     "compromise": "^14.14.5",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",

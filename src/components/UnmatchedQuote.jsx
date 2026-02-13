@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { ChevronUp, FileText, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
+import clsx from 'clsx';
 import { useApp } from '../AppProvider';
 import { TaskSection } from './TaskSection';
 import { UnmatchedQuoteSettings } from './UnmatchedQuoteSettings';
@@ -8,6 +9,9 @@ import { scrollToParagraph } from '../utils/scrollTo'
 
 export const UnmatchedQuote = () => {
   const { allParagraphs, isProcessing, quoteExceptions } = useApp();
+
+  const [showSingle, setShowSingle] = useState(true);
+  const [showDouble, setShowDouble] = useState(true);
 
   const unmatchedQuotes = (text) => {
     // Normalize curly single quotes to straight ones for easier matching
@@ -44,15 +48,28 @@ export const UnmatchedQuote = () => {
       .filter(([, paragraph]) => paragraph.singleQuoteCount % 2 || paragraph.doubleQuoteCount % 2);
   }, [allParagraphs, quoteExceptions]);
 
+  const filteredParagraphsWithUnmatchedQuote = paragraphsWithUnmatchedQuote.filter(([id, para]) =>
+    (showSingle && para.singleQuoteCount % 2 === 1) || (showDouble && para.doubleQuoteCount % 2 === 1));
+
   return (
     <TaskSection title="Unmatched Quotes">
-      <UnmatchedQuoteSettings />
+      <UnmatchedQuoteSettings
+        showSingle={showSingle}
+        setShowSingle={setShowSingle}
+        showDouble={showDouble}
+        setShowDouble={setShowDouble}
+      />
 
       <div className="w-full border border-slate-200 rounded-lg overflow-hidden bg-white">
         <Disclosure defaultOpen={true}>
           {({ open }) => (
             <>
-              <DisclosureButton className="flex w-full items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100  transition-colors border-b border-slate-200">
+              <DisclosureButton
+                className={clsx(
+                  "flex w-full items-center justify-between px-4 py-3 bg-slate-50",
+                  "hover:bg-slate-100  transition-colors border-b border-slate-200"
+                )}
+              >
                 <div className="flex items-center gap-2">
                   <FileText size={16} className="text-blue-600" />
                   <span className="text-sm font-semibold text-slate-700">Unmatched Quotes</span>
@@ -60,7 +77,7 @@ export const UnmatchedQuote = () => {
                     <Loader2 size={14} className="ml-3 animate-spin text-slate-400" />
                   ) : (
                     <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">
-                      {paragraphsWithUnmatchedQuote.length}
+                      {filteredParagraphsWithUnmatchedQuote.length}
                     </span>
                   )}
                 </div>
@@ -71,13 +88,16 @@ export const UnmatchedQuote = () => {
               </DisclosureButton>
 
               <DisclosurePanel className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-                {paragraphsWithUnmatchedQuote.map(([id, para]) => (
+                {filteredParagraphsWithUnmatchedQuote.map(([id, para]) => (
                   <div 
                     key={id} 
                     className="p-3 hover:bg-blue-50/30 transition-colors cursor-pointer group"
                     onClick={() => scrollToParagraph(id)}
                   >
-                    <p className="truncate text-xs text-slate-600 italic mb-2 line-clamp-1 group-hover:text-slate-900 transition-colors">
+                    <p className={clsx(
+                      "truncate text-xs text-slate-600 italic mb-2 line-clamp-1",
+                      "group-hover:text-slate-900 transition-colors")}
+                    >
                       "{para.text}"
                     </p>
 

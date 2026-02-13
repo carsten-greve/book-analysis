@@ -18,11 +18,17 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     Office.context.document.settings.refreshAsync(() => {
-      const savedSentences = Office.context.document.settings.get("sentenceThreshold");
-      const savedWords = Office.context.document.settings.get("wordThreshold");
+      const savedSentenceThreshold = Office.context.document.settings.get("sentenceThreshold");
+      const savedWordThreshold = Office.context.document.settings.get("wordThreshold");
+      const savedSentenceWordThreshold = Office.context.document.settings.get("sentenceWordThreshold");
+      const savedSentenceCharacterThreshold = Office.context.document.settings.get("sentenceCharacterThreshold");
+      const savedQuoteExceptions = Office.context.document.settings.get("quoteExceptions");
 
-      setSentenceThreshold(prev => savedSentences ?? prev);
-      setWordThreshold(prev => savedWords ?? prev);
+      setSentenceThreshold(prev => savedSentenceThreshold ?? prev);
+      setWordThreshold(prev => savedWordThreshold ?? prev);
+      setSentenceWordThreshold(prev => savedSentenceWordThreshold ?? prev);
+      setSentenceCharacterThreshold(prev => savedSentenceCharacterThreshold ?? prev);
+      setQuoteExceptions(prev => savedQuoteExceptions ?? prev);
     });
   }, []);
 
