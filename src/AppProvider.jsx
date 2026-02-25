@@ -14,12 +14,12 @@ export const AppProvider = ({ children }) => {
   const [sentenceCharacterThreshold, setSentenceCharacterThreshold] = useState(150);
   const [quoteExceptions, setQuoteExceptions] = useState([]);
   const [commonMisspellings, setCommonMisspellings] = useState([
-    ["bare", "bear"],
-    ["its", "it's"],
-    ["brought", "bought"],
-    ["accept", "except"],
-    ["affect", "effect"],
-    ["forward", "forwards"],
+    { words: ["bare", "bear"], isActive: true },
+    { words: ["its", "it's"], isActive: true },
+    { words: ["brought", "bought"], isActive: true },
+    { words: ["accept", "except"], isActive: true },
+    { words: ["affect", "effect"], isActive: true },
+    { words: ["forward", "forwards"], isActive: true },
   ]);
 
   const isProcessing = isLoading || isPending;

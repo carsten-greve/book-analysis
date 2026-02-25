@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, X } from 'lucide-react';
+import { Pause, Play, Settings, X } from 'lucide-react';
 import clsx from "clsx";
 import { useApp } from '../AppProvider';
 
@@ -14,7 +14,7 @@ export const CommonMisspellingSettings = () => {
     const word1TrimmedNormalized = word1.trim().replace(/[‘’]/g, "'");
     const word2TrimmedNormalized = word2.trim().replace(/[‘’]/g, "'");
     if (word1TrimmedNormalized && word2TrimmedNormalized) {
-      const newList = [...commonMisspellings, [word1TrimmedNormalized, word2TrimmedNormalized]];
+      const newList = [...commonMisspellings, { words: [word1TrimmedNormalized, word2TrimmedNormalized], isActive: true }];
       updateCommonMisspellings(newList);
       setWord1("");
       setWord2("");
@@ -23,6 +23,14 @@ export const CommonMisspellingSettings = () => {
 
   const removeWordPair = (indexToRemove) => {
     const newList = commonMisspellings.filter((_, index) => index !== indexToRemove);
+    updateCommonMisspellings(newList);
+  };
+
+  const toggleActive = (indexToToggle) => {
+    const newList = commonMisspellings.with(indexToToggle, {
+      ...commonMisspellings[indexToToggle],
+      isActive: !commonMisspellings[indexToToggle].isActive,
+    });
     updateCommonMisspellings(newList);
   };
 
@@ -72,18 +80,42 @@ export const CommonMisspellingSettings = () => {
           <p className="text-xs text-slate-400 italic">No common misspellings added yet.</p>
         ) : (
           commonMisspellings.map((wordPair, index) => (
-            <div 
-              key={index} 
-              className="flex justify-between items-center bg-white px-3 py-1.5 border border-slate-200 rounded-md shadow-sm"
+            <div
+              key={index}
+              className={clsx(
+                "group flex justify-between items-center",
+                "bg-white px-3 py-1.5 border border-slate-200 rounded-md shadow-sm"
+              )}
             >
-              <span className="text-sm font-mono text-slate-600">{`${wordPair[0]} / ${wordPair[1]}`}</span>
-              <button
-                onClick={() => removeWordPair(index)}
-                className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                title="Remove"
-              >
-                <X size={24} />
-              </button>
+              <span className="text-sm font-mono text-slate-600">{`${wordPair.words[0]} / ${wordPair.words[1]}`}</span>
+              <div>
+                {wordPair.isActive &&
+                  <button
+                    onClick={() => toggleActive(index)}
+                    className="invisible group-hover:visible text-slate-400 hover:text-blue-500 transition-colors p-1"
+                    title="Pause"
+                  >
+                    <Pause size={24} />
+                  </button>
+                }
+                {wordPair.isActive ||
+                  <button
+                    onClick={() => toggleActive(index)}
+                    className="hover text-slate-400 transition-colors p-1"
+                    title="Resume"
+                  >
+                    <Pause size={24} className="block group-hover:hidden text-blue-500" />
+                    <Play size={24} className="hidden group-hover:block hover:text-green-500" />
+                  </button>
+                }
+                <button
+                  onClick={() => removeWordPair(index)}
+                  className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                  title="Remove"
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
           ))
         )}

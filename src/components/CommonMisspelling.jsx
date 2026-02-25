@@ -10,7 +10,7 @@ import { ResultHeader } from './ResultHeader';
 export const CommonMisspelling = () => {
   const { allParagraphs, commonMisspellings } = useApp();
 
-  const uniqueWords = [...new Set(commonMisspellings.flat())];
+  const uniqueWords = [...new Set(commonMisspellings.filter(cm => cm.isActive).map(cm => cm.words).flat())];
 
   const getFoundWords = (text) => uniqueWords.filter(word => {
     const regex = new RegExp(`\\b${word}\\b`, 'i');

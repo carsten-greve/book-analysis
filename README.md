@@ -13,6 +13,7 @@ npx office-addin-dev-certs install
   Installs the CA Certificate: It adds the generated "Developer CA for Microsoft Office Add-ins" to your operating system's Trusted Root   Certification Authorities.
   Enables System-Wide Trust: By installing the CA certificate, browsers (Edge, Chrome) and the Word desktop host (WebView2) will trust your   https://localhost development server without displaying "unsafe" or "unsupported protocol" warnings.
   Sets 30-Day Validity: The certificates are valid for 30 days by default, after which they must be re-installed. 
+  ![Error displayed if certificate expired](https://github.com/user-attachments/assets/eea6bff7-ab28-4ac2-add6-39ba6ddfcf6f)
 
 npm run build
 npm run dev
