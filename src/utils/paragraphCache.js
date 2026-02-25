@@ -30,8 +30,9 @@ const hasInterrogativeStructure = s => {
 
 export const getParagraphCache = (text) => {
   // compromise.nlp gets confused by quotes. Cannot work out sentences.
-  let doc = nlp(text.replace(/["“”'‘]+/g, '').replace(/(?<![a-zA-Z])’/g, ''));
-  let sentences = doc.sentences();
+  const doc = nlp(text.replace(/["“”'‘]+/g, '').replace(/(?<![a-zA-Z])’/g, ''));
+  const sentences = doc.sentences();
+  const questions = doc.questions().ifNo('?').filter(q => !q.out('text').trim().endsWith('?'));
 
   return {
     text,
@@ -42,8 +43,8 @@ export const getParagraphCache = (text) => {
       sentenceWordCount : nlp(s.text).wordCount(),
       sentenceCharacterCount : s.text.length,
     }))],
-    interrogativeStructures : [...sentences.filter(hasInterrogativeStructure).json().map(s => ({
-    text : s.text,
-  }))]
+    interrogativeStructures : [...new Set(
+      [...sentences.filter(hasInterrogativeStructure).json().map(s => s.text)].concat([...questions.json().map(q => q.text)])
+    )].map(t => ({ text : t })),
   };
 };
