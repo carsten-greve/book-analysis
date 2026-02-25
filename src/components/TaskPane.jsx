@@ -2,6 +2,7 @@ import { ParagraphSize } from './ParagraphSize';
 import { SentenceSize } from './SentenceSize';
 import { UnmatchedQuote } from './UnmatchedQuote';
 import { CommonMisspelling } from './CommonMisspelling';
+import { InterrogativeStructure } from './InterrogativeStructure';
 
 export const TaskPane = () => {
   return (
@@ -14,6 +15,8 @@ export const TaskPane = () => {
         <UnmatchedQuote />
 
         <CommonMisspelling />
+
+        <InterrogativeStructure />
       </div>
     </div>
   );

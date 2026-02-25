@@ -35,7 +35,7 @@ export const CommonMisspelling = () => {
         <Disclosure defaultOpen={true}>
           {({ open }) => (
             <>
-              <ResultHeader open={open} text={"Paragraphs"} count={paragraphsWithCommonMisspelling.length} />
+              <ResultHeader open={open} text={"Common Misspellings"} count={paragraphsWithCommonMisspelling.length} />
 
               <DisclosurePanel className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
                 {paragraphsWithCommonMisspelling.map(([id, para, foundWords]) => (
