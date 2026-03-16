@@ -46,5 +46,6 @@ export const getParagraphCache = (text) => {
     interrogativeStructures : [...new Set(
       [...sentences.filter(hasInterrogativeStructure).json().map(s => s.text)].concat([...questions.json().map(q => q.text)])
     )].map(t => ({ text : t })),
+    hasWrongEnding: /( |(?<![.?!…])"|[^.?!…"])$/.test(text.replace(/[“”]+/g, '"')),
   };
 };

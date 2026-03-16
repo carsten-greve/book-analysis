@@ -3,6 +3,7 @@ import { SentenceSize } from './SentenceSize';
 import { UnmatchedQuote } from './UnmatchedQuote';
 import { CommonMisspelling } from './CommonMisspelling';
 import { InterrogativeStructure } from './InterrogativeStructure';
+import { WrongEnding } from './WrongEnding';
 
 export const TaskPane = () => {
   return (
@@ -17,6 +18,8 @@ export const TaskPane = () => {
         <CommonMisspelling />
 
         <InterrogativeStructure />
+
+        <WrongEnding />
       </div>
     </div>
   );
