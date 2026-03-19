@@ -28,12 +28,13 @@ export const AppProvider = ({ children }) => {
     { words: ["whose", "who's"], isActive: false },
   ]);
   const [styleOrder, setStyleOrder] = useState({});
-  const styleOrderRef = useRef(styleOrder);
   const [styleErrors, setStyleErrors] = useState([]);
 
-  useEffect(() => {
-    styleOrderRef.current = styleOrder;
-  }, [styleOrder]);
+  const styleOrderRef = useRef(styleOrder);
+  useEffect(() => { styleOrderRef.current = styleOrder; }, [styleOrder]);
+
+  const allStylesRef = useRef(allStyles);
+  useEffect(() => { allStylesRef.current = allStyles; }, [allStyles]);
 
   const isProcessing = isLoading || isPending;
 
@@ -117,8 +118,8 @@ export const AppProvider = ({ children }) => {
         const anchorId = prevPara.isNullObject ? null : prevPara.uniqueLocalId;
         paraMap.current.upsert(uniqueLocalIds[0], newPara.style, anchorId);
 
-        if (!allStyles.includes(newPara.style)) {
-          setAllStyles([...allStyles, newPara.style]);
+        if (!allStylesRef.current.includes(newPara.style)) {
+          setAllStyles([...allStylesRef.current, newPara.style]);
         }
       }
       else if (uniqueLocalIds.length > 1) {
@@ -160,8 +161,9 @@ export const AppProvider = ({ children }) => {
 
         paraMap.current.upsert(id, paragraph.style);
 
-        if (!allStyles.includes(paragraph.style)) {
-          setAllStyles([...allStyles, paragraph.style]);
+        // Unfortunately, this does not work. onParagraphChanged does NOT get called on a simple style change.
+        if (!allStylesRef.current.includes(paragraph.style)) {
+          setAllStyles([...allStylesRef.current, paragraph.style]);
         }
       }
     }).catch((error) => {
