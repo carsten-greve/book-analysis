@@ -4,6 +4,7 @@ import { UnmatchedQuote } from './UnmatchedQuote';
 import { CommonMisspelling } from './CommonMisspelling';
 import { InterrogativeStructure } from './InterrogativeStructure';
 import { WrongEnding } from './WrongEnding';
+import { StyleChecker } from './StyleChecker';
 
 export const TaskPane = () => {
   return (
@@ -20,6 +21,8 @@ export const TaskPane = () => {
         <InterrogativeStructure />
 
         <WrongEnding />
+
+        <StyleChecker />
       </div>
     </div>
   );

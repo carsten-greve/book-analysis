@@ -1,11 +1,15 @@
-import { createContext, useState, useContext, useTransition, useEffect } from 'react';
+import { createContext, useState, useContext, useTransition, useEffect, useRef, useMemo } from 'react';
 import { getParagraphCache } from './utils/paragraphCache';
+import { ParagraphMap } from './utils/ParagraphMap';
 import { sleep } from './utils/timer';
+import { debounce } from './utils/debounce';
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+  const paraMap = useRef(new ParagraphMap());
   const [allParagraphs, setAllParagraphs] = useState({});
+  const [allStyles, setAllStyles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [sentenceThreshold, setSentenceThreshold] = useState(10);
@@ -23,6 +27,13 @@ export const AppProvider = ({ children }) => {
     { words: ["roll", "role"], isActive: false },
     { words: ["whose", "who's"], isActive: false },
   ]);
+  const [styleOrder, setStyleOrder] = useState({});
+  const styleOrderRef = useRef(styleOrder);
+  const [styleErrors, setStyleErrors] = useState([]);
+
+  useEffect(() => {
+    styleOrderRef.current = styleOrder;
+  }, [styleOrder]);
 
   const isProcessing = isLoading || isPending;
 
@@ -60,18 +71,116 @@ export const AppProvider = ({ children }) => {
     });
   }
 
-  const handleParagraphChange = async (event) => {
+  const adjacentStyleCheck = (currentStyle, nextStyle) => {
+    const allowedNextStyles = styleOrderRef.current[currentStyle];
+    return allowedNextStyles && !allowedNextStyles.includes(nextStyle)
+      ? `Style "${nextStyle}" cannot follow style "${currentStyle}".` : null;
+  }
+
+  const debouncedStyleCheck = useMemo(() =>
+    debounce(() => {
+      const styleErrors = [];
+      let currentNode = paraMap.current.head;
+      while (true) {
+        const nextNode = currentNode?.next;
+        if (!nextNode) break;
+
+        const errorText = adjacentStyleCheck(currentNode.style, nextNode.style);
+        if (errorText) {
+          styleErrors.push({
+            id: nextNode.id,
+            errorText,
+          });
+        }
+
+        currentNode = nextNode;
+      }
+
+      setStyleErrors(styleErrors);
+    }, 250),
+  []);
+
+  useEffect(() => {
+    debouncedStyleCheck();
+  }, [styleOrder]);
+
+  const addToParagraphMap = async (uniqueLocalIds) => {
     await Word.run(async (context) => {
-      for (const id of event.uniqueLocalIds) {
+      if (uniqueLocalIds.length === 1) {
+        const newPara = context.document.getParagraphByUniqueLocalId(uniqueLocalIds[0]);
+        const prevPara = newPara.getPreviousOrNullObject();
+        newPara.load("style");
+        prevPara.load("uniqueLocalId");
+
+        await context.sync();
+
+        const anchorId = prevPara.isNullObject ? null : prevPara.uniqueLocalId;
+        paraMap.current.upsert(uniqueLocalIds[0], newPara.style, anchorId);
+
+        if (!allStyles.includes(newPara.style)) {
+          setAllStyles([...allStyles, newPara.style]);
+        }
+      }
+      else if (uniqueLocalIds.length > 1) {
+        const paragraphs = context.document.body.paragraphs;
+        paragraphs.load("uniqueLocalId, style");
+
+        await context.sync();
+
+        paraMap.current.nodes.clear();
+        paraMap.current.head = null;
+        paraMap.current.tail = null;
+
+        let previousId = null;
+        const usedStyles = new Set();
+        for (let i = 0; i < paragraphs.items.length; i++) {
+          const p = paragraphs.items[i];
+          paraMap.current.upsert(p.uniqueLocalId, p.style, previousId);
+          previousId = p.uniqueLocalId;
+          usedStyles.add(paragraph.style);
+        }
+        setAllStyles([...usedStyles]);
+      }
+    }).catch((error) => {
+      console.error(error)
+    });
+  }
+
+  const updateParagraphMap = async (uniqueLocalIds) => {
+    await Word.run(async (context) => {
+      for (const id of uniqueLocalIds) {
         const paragraph = context.document.getParagraphByUniqueLocalId(id);
-        paragraph.load("text");
+        paragraph.load("style");
+
         await context.sync();
 
         if (paragraph.isNullObject) {
           continue;
         }
 
-        const paragraphCache = getParagraphCache(paragraph.text);
+        paraMap.current.upsert(id, paragraph.style);
+
+        if (!allStyles.includes(paragraph.style)) {
+          setAllStyles([...allStyles, paragraph.style]);
+        }
+      }
+    }).catch((error) => {
+      console.error(error)
+    });
+  };
+
+  const updateParagraphCache = async (uniqueLocalIds) => {
+    await Word.run(async (context) => {
+      for (const id of uniqueLocalIds) {
+        const paragraph = context.document.getParagraphByUniqueLocalId(id);
+        paragraph.load("text, style");
+        await context.sync();
+
+        if (paragraph.isNullObject) {
+          continue;
+        }
+
+        const paragraphCache = getParagraphCache(paragraph);
         setAllParagraphs((prev) => ({ ...prev, [id]: paragraphCache }));
       }
     }).catch((error) => {
@@ -79,8 +188,18 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const handleParagraphChange = async (event) => {
+    await updateParagraphCache(event.uniqueLocalIds);
+    await updateParagraphMap(event.uniqueLocalIds);
+
+    debouncedStyleCheck();
+  };
+
   const handleParagraphAdd = async (event) => {
-    await handleParagraphChange(event);
+    await updateParagraphCache(event.uniqueLocalIds);
+    await addToParagraphMap(event.uniqueLocalIds);
+
+    debouncedStyleCheck();
   };
 
   const handleParagraphDelete = async (event) => {
@@ -89,7 +208,11 @@ export const AppProvider = ({ children }) => {
         const { [id]: removed, ...rest } = prev;
         return rest;
       });
+
+      paraMap.current.delete(id);
     }
+
+    debouncedStyleCheck();
   };
 
   useEffect(() => {
@@ -103,13 +226,25 @@ export const AppProvider = ({ children }) => {
         if (signal.aborted) return;
 
         const paragraphs = context.document.body.paragraphs;
-        paragraphs.load("text, uniqueLocalId");
+        paragraphs.load("text, uniqueLocalId, style");
+
         await context.sync();
+
+        paraMap.current.nodes.clear();
+        paraMap.current.head = null;
+        paraMap.current.tail = null;
+
+        let previousId = null;
 
         if (!signal.aborted) {
           let initialParagraphs = {};
+          const usedStyles = new Set();
           for (const paragraph of paragraphs.items) {
-            initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph.text);
+            initialParagraphs[paragraph.uniqueLocalId] = getParagraphCache(paragraph);
+            usedStyles.add(paragraph.style);
+
+            paraMap.current.upsert(paragraph.uniqueLocalId, paragraph.style, previousId);
+            previousId = paragraph.uniqueLocalId;
 
             context.trackedObjects.remove(paragraph);
             await sleep(1);
@@ -119,6 +254,8 @@ export const AppProvider = ({ children }) => {
           context.document.onParagraphChanged.add((args) => { startTransition(() => handleParagraphChange(args)); });
           context.document.onParagraphAdded.add((args) => { startTransition(() => handleParagraphAdd(args)); });
           context.document.onParagraphDeleted.add((args) => { startTransition(() => handleParagraphDelete(args)); });
+
+          setAllStyles([...usedStyles]);
         }
       }).catch((error) => {
         console.error(error);
@@ -138,6 +275,7 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{
       allParagraphs,
+      allStyles,
       isProcessing,
       sentenceThreshold,
       updateSentenceThreshold,
@@ -151,6 +289,9 @@ export const AppProvider = ({ children }) => {
       updateQuoteExceptions,
       commonMisspellings,
       updateCommonMisspellings,
+      styleOrder,
+      setStyleOrder,
+      styleErrors,
     }}>
       {children}
     </AppContext.Provider>
