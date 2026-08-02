@@ -26,6 +26,7 @@ export const AppProvider = ({ children }) => {
     { words: ["forward", "forwards"], isActive: false },
     { words: ["roll", "role"], isActive: false },
     { words: ["whose", "who's"], isActive: false },
+    { words: ["decent", "descent"], isActive: false },
   ]);
   const [styleOrder, setStyleOrder] = useState({});
   const [styleErrors, setStyleErrors] = useState([]);
